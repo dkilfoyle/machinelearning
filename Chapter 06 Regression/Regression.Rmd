@@ -10,7 +10,7 @@ output: html_notebook
 For predicting numeric amounts
 
 ```{r}
-insurance <- read.csv("Chapter06/insurance.csv", stringsAsFactors = TRUE)
+insurance <- read.csv("insurance.csv", stringsAsFactors = TRUE)
 
 # more informative scatterplot matrix
 library(psych)
@@ -49,7 +49,7 @@ summary(ins_model2)
 Each node is average value of the dependent variable
 
 ```{r}
-wine <- read.csv("chapter06/whitewines.csv")
+wine <- read.csv("whitewines.csv")
 wine_train <- wine[1:3750, ]
 wine_test <- wine[3751:4898, ]
 

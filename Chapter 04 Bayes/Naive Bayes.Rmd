@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r loaddata}
-sms_raw <- read.csv("Chapter04/sms_spam.csv", stringsAsFactors = FALSE)
+sms_raw <- read.csv("sms_spam.csv", stringsAsFactors = FALSE)
 sms_raw$type <- factor(sms_raw$type)
 table(sms_raw$type)
 ```
