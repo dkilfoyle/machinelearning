@@ -29,7 +29,7 @@ class Network(object):
         layer is assumed to be an input layer, and by convention we
         won't set any biases for those neurons, since biases are only
         ever used in computing the outputs from later layers."""
-        self.num_layers = len(sizes)tra
+        self.num_layers = len(sizes)
         self.sizes = sizes
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
         self.weights = [np.random.randn(y, x)
@@ -138,3 +138,10 @@ def sigmoid(z):
 def sigmoid_prime(z):
     """Derivative of the sigmoid function."""
     return sigmoid(z)*(1-sigmoid(z))
+    
+net=Network([2,3,1])
+#training_data=[(np.array([0,0]),np.array([0])), (np.array([0,1]),np.array([1])), (np.array([1,0]),np.array([1])), (np.array([1,1]),np.array([0]))]
+training_data=[(np.array([0,0]),0), (np.array([0,1]),1), (np.array([1,0]),1), (np.array([1,1]),0)]
+
+# ([0,1],[1]), ([1,0],[1]),([1,1],[0])]
+net.SGD(training_data, 30, 2, 0.1)

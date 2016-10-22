@@ -143,7 +143,7 @@ set.seed(12345)
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
 
-sizes=c(2,3,1)
+sizes=c(3,4,1)
 num.layers=length(sizes)
 
 # generate a vector for each layer containing biases for each neuron. Exclude 1st layer which is input only and doesn't need a bias
@@ -167,7 +167,8 @@ feedForward = function(a) {
 # Do gradient descent on epochs of mini.batch.size instead of the entire test data
 # This makes calculating the cost gradient much less intensive
 SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
-  if (test.data) n.test=length(test.data)
+  if (!(is.null(test.data)))
+    n.test=length(test.data)
   n = length(training.data)
   
   for (j in 1:epochs) {
@@ -254,7 +255,31 @@ backprop = function(x, y) {
 }
 ```
 
+
+## Testing
  
+```{r}
+# iris.scale = scale(iris[,1:4])
+# species.n = as.integer(iris$Species)
+# training=list()
+# for (i in 1:nrow(iris.scale)) {
+#   y=c(0,0,0)
+#   y[species.n[i]]=1
+#   training[[i]] = list(
+#     as.vector(iris.scale[i,1:4]),
+#     y
+#   )
+# }
+
+training=list()
+training[[1]]=list(c(0,0,1),c(0))
+training[[2]]=list(c(0,1,1),c(1))
+training[[3]]=list(c(1,0,1),c(1))
+training[[4]]=list(c(1,1,1),c(0))
+
+SGD(training, 10, 4, 0.3)
+```
+
 
 ## R Library
 
