@@ -1,20 +1,19 @@
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
 
-feedForward = function(a) {
+solveForward = function(a) {
   # feed the activations from the previous layer into the neurons of the next layer
   for (l in 2:num.layers) {
     z = (weights[[l]] %*% a)+biases[[l]]
     a = sigmoid(z)
-    ffz[[l]] <<- z
-    ffa[[l]] <<- a
   }
   return(a)
 }
 
 # Stochastic gradient descent
-# Do gradient descent on epochs of mini.batch.size instead of the entire test data
-# This makes calculating the cost gradient much less intensive
+# Run throught the trianing data epoch number of times
+# For each run process training data in batches of mini.batch.size
+# only update the weights once per mini.batch using the batches average gradient vector
 SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
   
   n = length(training.data)
@@ -22,14 +21,15 @@ SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
     cat("Epoch ", j, " ")
-    
-    # split the training data into batches of mini.batch.size
     MSE = 0.0 # Squared Error for averaging
+    
+    # process training data in batches of mini.batch.size
     for (i in seq(1, n, mini.batch.size)) {
       # sample(1:n) randomizes the order of the training data
       MSE = MSE + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta)
     }
 
+    # evaluate the net at the end of this epoch using test data
     if (!(is.null(test.data))) {
       n.test=length(test.data)
       cat(evaluate(test.data)," / ",n.test, " MSE = ", MSE/n, " Output = ", activations[[3]][1])
@@ -39,12 +39,16 @@ SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
   }
 }  
 
-# Update network weights and biases by applying gradient descent backpropogation to a single minibatch
+# Process a mini batch = for each x in mini batch:
+# 1) feedForward to generate current activations
+# 2) backPropogate to generate error gradients for each weight (partial derivative of error with respect to weight )
+# 3) average the error gradients across the mini batch
+# 4) update weights based on error gradient and learning rate eta
 do.mini.batch = function(mini.batch, eta) {
   
   # Zero the gradient vectors using the same shape as the source 
-  nabla.b.sum = lapply(biases, function(x) x*0)
-  nabla.w.sum = lapply(weights, function(x) x*0)
+  nablasum.b = lapply(biases, function(x) x*0)
+  nablasum.w = lapply(weights, function(x) x*0)
   
   MSE = 0.0 # total squared error for minibatch
   
@@ -52,54 +56,55 @@ do.mini.batch = function(mini.batch, eta) {
   m = length(mini.batch)
   for (i in 1:m) {
     
-    # backpropagation ==============================================================
-    # calculate gradient vector based on a single training sample x
-    nabla.x = backprop(mini.batch[[i]][[1]], mini.batch[[i]][[2]]) 
+    x = mini.batch[[i]]
     
-    # running total for all x in minibatch
+    # Feed forward
+    feedForward(x[[1]])
+    
+    # Back propogation
+    # calculate gradient vector based on a single training sample x
+    nabla.x = backPropogate(x[[1]], x[[2]]) 
+    
+    # running total for all x in this minibatch
     for (l in 2:num.layers) {
-      nabla.b.sum[[l]] = nabla.b.sum[[l]] + nabla.x$b[[l]]
-      nabla.w.sum[[l]] = nabla.w.sum[[l]] + nabla.x$w[[l]]
+      nablasum.b[[l]] = nablasum.b[[l]] + nabla.x$b[[l]]
+      nablasum.w[[l]] = nablasum.w[[l]] + nabla.x$w[[l]]
     }
     
     MSE = MSE + sum(nabla.x$E)
   }
   
-  # Update the weights using the gradient vector and eta
-  # Use the average of gradient vectors in the mini.batch
-  # ie nabla.sum / m
-  # see eq 10 and 11
-  # delta_w = eta * (sum.of.nablas / m)
-  # new_w = old_w + delta_w
+  # Update weights
+  # Use the average of gradient vectors in the mini.batch ie nabla.sum / m
+  # delta_w = eta * (sum.of.nablas / m) then new_w = old_w + delta_w
   eta.div.m = eta/m
   for (l in 2:num.layers) {
-    weights[[l]] <<- weights[[l]] + (eta.div.m * nabla.w.sum[[l]])
-    biases[[l]] <<- biases[[l]] + (eta.div.m * nabla.b.sum[[l]])
+    weights[[l]] <<- weights[[l]] + (eta.div.m * nablasum.w[[l]])
+    biases[[l]] <<- biases[[l]] + (eta.div.m * nablasum.b[[l]])
   }
   
   return(MSE)
 }
 
-# return a list of nabla.b and nabla.w which are the pC/pw and pC/pb calculated from the activations and the errors
-backprop = function(x, y) {
-  
-  # feedforward
-  # ===========
-  
+# feed training data forward generating a per layer list of activations and z values
+feedForward = function(x) {
   activation = x # input values
   activations <<- list(x) # list to store all the activations layer by layer
-  z = list() # list to store all the zs layer by layer, where z = wa+b
-  
-  L = num.layers 
-  
-  for (l in 2:L) { # because layer 1 has no weights
-    z[[l]] = (weights[[l]] %*% activation) + biases[[l]]
+  z<<- list() # list to store all the zs layer by layer, where z = wa+b
+
+  for (l in 2:num.layers) { # because layer 1 has no weights
+    z[[l]] <<- (weights[[l]] %*% activation) + biases[[l]]
     activation = sigmoid(z[[l]])
     activations[[l]] <<- activation
   }
-  
-  # Back propagation
-  # ================
+}
+
+# calculate the error gradients (nabla = pE/pw_ij) for each weight
+# 1) Start with the activations and zs generated by feedForward
+# 2) calculate the error for each neuron in the final layer
+# 3) calculate nodedelta from error, sigmoidprime and for interior nodes the weights
+# 4) calculate the gradient (nabla) from the nodedeltas and activations
+backPropogate = function(x, y) {
   
   # Zero the gradient vectors using the same shape as the source 
   nabla.b = lapply(biases, function(x) x*0)
@@ -107,6 +112,8 @@ backprop = function(x, y) {
   
   # delta is the error term of the gradient vector
   delta=list()
+  
+  L = num.layers
   
   # output delta = costderivative * sigmoid derivative(z)
   # costderivative = Error = actual - expected
@@ -131,18 +138,13 @@ backprop = function(x, y) {
   return(list(w=nabla.w, b=nabla.b, E=(E*E)))
 }
 
+# Return the number of test inputs for which the neural network outputs the correct result
 evaluate = function(test_data) {
-  # Return the number of test inputs for which the neural
-  # network outputs the correct result. Note that the neural
-  # network's output is assumed to be the index of whichever
-  # neuron in the final layer has the highest activation.
   correct = 0
-  
   for (i in 1:length(test_data)) {
-    output = feedForward(test_data[[i]][[1]])
+    output = solveForward(test_data[[i]][[1]])
     correct = correct + (round(output) == test_data[[i]][[2]])
   }
-  
   return(correct)
 }
   
@@ -204,7 +206,7 @@ training[[4]]=list(c(1,1),c(0))
 
 E = list()
 
-SGD(training, 10000, 1, 0.7, training)
+SGD(training, 500, 1, 0.7, training)
 
 # ffz = list()
 # ffa = list()
