@@ -147,7 +147,7 @@ evaluate = function(test_data) {
 }
   
 set.seed(12345)
-sizes=c(2,2,1)
+sizes=c(2,3,1)
 num.layers=length(sizes)
 
 # generate a vector for each layer containing biases for each neuron. \
