@@ -211,3 +211,5 @@ SGD(training, 500, 1, 0.7, training)
 # ffz = list()
 # ffa = list()
 # feedForward(c(1.0,0.0))
+
+
