@@ -25,28 +25,29 @@ solveForward = function(a) {
 # Run throught the trianing data epoch number of times
 # For each run process training data in batches of mini.batch.size
 # only update the weights once per mini.batch using the batches average gradient vector
-SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
+SGD = function(training.data, epochs, mini.batch.size, eta, momentum, test.data=NULL) {
   
   n = length(training.data)
   
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
-    cat("Epoch ", j, " ")
+    cat("Epoch ", j, " ",sep="")
     MSE = 0.0 # Squared Error for averaging
     
     # process training data in batches of mini.batch.size
     for (i in seq(1, n, mini.batch.size)) {
       # sample(1:n) randomizes the order of the training data
       if (dkdebug) # don't randomise order
-        MSE = MSE + do.mini.batch(training.data[i:(i+mini.batch.size-1)], eta)
+        MSE = MSE + do.mini.batch(training.data[i:(i+mini.batch.size-1)], eta, momentum)
       else
-        MSE = MSE + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta)
+        MSE = MSE + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta, momentum)
     }
 
     # evaluate the net at the end of this epoch using test data
     if (!(is.null(test.data))) {
       n.test=length(test.data)
-      cat(evaluate(test.data)," / ",n.test, " MSE = ", MSE/n, " Output = ", activations[[3]][1])
+      cat(evaluate(test.data), " / ",n.test, 
+        " MSE = ", MSE/n, sep="")
     }
 
     cat("\n")
@@ -58,7 +59,7 @@ SGD = function(training.data, epochs, mini.batch.size, eta, test.data=NULL) {
 # 2) backPropogate to generate error gradients for each weight (partial derivative of error with respect to weight )
 # 3) average the error gradients across the mini batch
 # 4) update weights based on error gradient and learning rate eta
-do.mini.batch = function(mini.batch, eta) {
+do.mini.batch = function(mini.batch, eta, momentum) {
   
   # Zero the gradient vectors using the same shape as the source 
   nabla_sum.b = lapply(biases, function(x) x*0)
@@ -89,14 +90,28 @@ do.mini.batch = function(mini.batch, eta) {
   }
   
   # calculate the average gradient for the minibatch
-  nabla_avg.w = lapply(nabla_sum.w, function(x) x/m)
-  nabla_avg.b = lapply(nabla_sum.b, function(x) x/m)
+  # nabla_avg.w = lapply(nabla_sum.w, function(x) x/m)
+  # nabla_avg.b = lapply(nabla_sum.b, function(x) x/m)
   
-  # updateWeights(nabla_avg.w, nabla_avg.b, eta)
-  # updateWeightsRPROP(nabla_avg.w, nabla_avg.b)
-  updateWeightsRPROP(nabla_sum.w, nabla_sum.b)
+  updateWeights(nabla_sum.w, nabla_sum.b, eta, momentum)
+  # updateWeightsRPROP(nabla_sum.w, nabla_sum.b)
     
   return (MSE)
+}
+
+# Update the weights using standard backpropgation ie a fixed eta
+updateWeights = function(nabla.w, nabla.b, eta, momentum) {
+  
+  for (l in 2:num.layers) {
+    wtChange.w = (eta * nabla.w[[l]]) + (momentum * lastWtChanges.w[[l]])
+    wtChange.b = (eta * nabla.b[[l]]) + (momentum * lastWtChanges.b[[l]])
+    
+    weights[[l]] <<- weights[[l]] + wtChange.w
+    biases[[l]] <<- biases[[l]] + wtChange.b
+    
+    lastWtChanges.w[[l]] <<- wtChange.w
+    lastWtChanges.b[[l]] <<- wtChange.b
+  }
 }
 
 # Update weights using Resilient Propogation (RPROP)
@@ -198,15 +213,7 @@ getRPROPWtChanges.b = function(gradients, l) {
   return (wtChanges)
 }
 
-# Update the weights using standard backpropgation ie a fixed eta
-updateWeights = function(nabla.w, nabla.b, eta) {
-  # Update weights
-  # delta_w = eta * (sum.of.nablas / m) then new_w = old_w + delta_w
-  for (l in 2:num.layers) {
-    weights[[l]] <<- weights[[l]] + (eta * nabla.w[[l]])
-    biases[[l]] <<- biases[[l]] + (eta * nabla.b[[l]])
-  }
-}
+
 
 # feed training data forward generating a per layer list of activations and z values
 feedForward = function(x) {
@@ -367,7 +374,7 @@ training[[4]]=list(c(1,1),c(0))
 
 E = list()
 
-SGD(training, 500, 4, 0.7, training)
+SGD(training, 1000, 4, 0.7, 0.3, training)
 
 # ffz = list()
 # ffa = list()
