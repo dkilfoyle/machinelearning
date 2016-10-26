@@ -3,6 +3,7 @@ dkdebug=T
 
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
+
 dksign = function(x) {
   if (abs(x) < 0.0000000000001)
     return(0)
@@ -28,30 +29,33 @@ solveForward = function(a) {
 SGD = function(training.data, epochs, mini.batch.size, eta, momentum, test.data=NULL) {
   
   n = length(training.data)
+  MSE = numeric(epochs)
   
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
     cat("Epoch ", j, " ",sep="")
-    MSE = 0.0 # Squared Error for averaging
+    MSE[j] = 0.0 # Squared Error for averaging
     
     # process training data in batches of mini.batch.size
     for (i in seq(1, n, mini.batch.size)) {
       # sample(1:n) randomizes the order of the training data
       if (dkdebug) # don't randomise order
-        MSE = MSE + do.mini.batch(training.data[i:(i+mini.batch.size-1)], eta, momentum)
+        MSE[j] = MSE[j] + do.mini.batch(training.data[i:(i+mini.batch.size-1)], eta, momentum)
       else
-        MSE = MSE + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta, momentum)
+        MSE[j] = MSE[j] + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta, momentum)
     }
 
     # evaluate the net at the end of this epoch using test data
     if (!(is.null(test.data))) {
       n.test=length(test.data)
       cat(evaluate(test.data), " / ",n.test, 
-        " MSE = ", MSE/n, sep="")
+        " MSE = ", MSE[j]/n, sep="")
     }
 
     cat("\n")
   }
+  
+  return(MSE)
 }  
 
 # Process a mini batch = for each x in mini batch:
@@ -277,82 +281,86 @@ evaluate = function(test_data) {
   return(correct)
 }
   
-set.seed(12345)
-sizes=c(2,2,1)
-num.layers=length(sizes)
+initNetwork <- function(sizes) {
+  set.seed(12345)
+  num.layers<<-length(sizes)
+  
+  # generate a vector for each layer containing biases for each neuron. \
+  # layer 1 doesnt need a bias
+  biases <<- lapply(sizes, rnorm)
+  biases[[1]] <<- NA
+  
+  lastGradients.b <<- lapply(sizes, function(x) { rep(0, x) })
+  lastGradients.b[[1]] <<- NA
+  
+  lastWtChanges.b <<- lapply(sizes, function(x) { rep(0, x) })
+  lastWtChanges.b[[1]] <<- NA
+  
+  updateValues.b <<- lapply(sizes, function(x) { rep(0.1, x) })
+  updateValues.b[[1]] <<- NA
+  
+  # generate a matrix w^l_{rs} for the weights connecting
+  # sending   neuron s in layer l-1 to
+  # receiving neuron j in layer l
+  # to allow use of dot products the matrix is organized
+  # 1 row for each receiving neuron r in layer l
+  # 1 col for each sending neuron s in layer l-1
 
-# generate a vector for each layer containing biases for each neuron. \
-# layer 1 doesnt need a bias
-biases = lapply(sizes, rnorm)
-biases[[1]]=NA
+  weights <<- lapply(1:num.layers, function(l) {
+    if (l==1) return(matrix()) # layer 1 doesn't need weights
+    matrix(rnorm(sizes[l]*sizes[l-1]),
+      nrow = sizes[l],
+      ncol = sizes[l-1]
+    )
+  })
+  
+  lastGradients.w <<- lapply(1:num.layers, function(l) {
+    if (l==1) return(matrix()) # layer 1 doesn't need weights
+    matrix(rep(0, sizes[l]*sizes[l-1]),
+      nrow = sizes[l],
+      ncol = sizes[l-1]
+    )
+  })
+  
+  lastWtChanges.w <<- lapply(1:num.layers, function(l) {
+    if (l==1) return(matrix()) # layer 1 doesn't need weights
+    matrix(rep(0, sizes[l]*sizes[l-1]),
+      nrow = sizes[l],
+      ncol = sizes[l-1]
+    )
+  })
+  
+  updateValues.w <<- lapply(1:num.layers, function(l) {
+    if (l==1) return(matrix()) # layer 1 doesn't need weights
+    matrix(rep(0.1, sizes[l]*sizes[l-1]),
+      nrow = sizes[l],
+      ncol = sizes[l-1]
+    )
+  })
+  
+  activations <<- list()
+  z <<- list()
+  updateValues <<- list()
+  lastDelta <<- list()
+}
 
-lastGradients.b = lapply(sizes, function(x) { rep(0, x) })
-lastGradients.b[[1]] = NA
-
-lastWtChanges.b = lapply(sizes, function(x) { rep(0, x) })
-lastWtChanges.b[[1]] = NA
-
-updateValues.b = lapply(sizes, function(x) { rep(0.1, x) })
-updateValues.b[[1]] = NA
-
-# generate a matrix w^l_{rs} for the weights connecting
-# sending   neuron s in layer l-1 to
-# receiving neuron j in layer l
-# to allow use of dot products the matrix is organized
-# 1 row for each receiving neuron r in layer l
-# 1 col for each sending neuron s in layer l-1
-weights = lapply(1:num.layers, function(l) {
-  if (l==1) return(matrix()) # layer 1 doesn't need weights
-  matrix(rnorm(sizes[l]*sizes[l-1]),
-    nrow = sizes[l],
-    ncol = sizes[l-1]
-  )
-})
-
-lastGradients.w = lapply(1:num.layers, function(l) {
-  if (l==1) return(matrix()) # layer 1 doesn't need weights
-  matrix(rep(0, sizes[l]*sizes[l-1]),
-    nrow = sizes[l],
-    ncol = sizes[l-1]
-  )
-})
-
-lastWtChanges.w = lapply(1:num.layers, function(l) {
-  if (l==1) return(matrix()) # layer 1 doesn't need weights
-  matrix(rep(0, sizes[l]*sizes[l-1]),
-    nrow = sizes[l],
-    ncol = sizes[l-1]
-  )
-})
-
-updateValues.w = lapply(1:num.layers, function(l) {
-  if (l==1) return(matrix()) # layer 1 doesn't need weights
-  matrix(rep(0.1, sizes[l]*sizes[l-1]),
-    nrow = sizes[l],
-    ncol = sizes[l-1]
-  )
-})
+weights = list()
 
 
-activations = list()
-z = list()
-updateValues = list()
-lastDelta = list()
-
-# H1 receiving weights
-weights[[2]][1,1] = -0.06782947598673161
-weights[[2]][1,2] =  0.22341077197888182
- biases[[2]][1] =   -0.4635107399577998
-
-# H2 receiving weights
-weights[[2]][2,1] =  0.9487814395569221
-weights[[2]][2,2] =  0.46158711646254
- biases[[2]][2] =    0.09750161997450091
-
-# o1 receiving weights
-weights[[3]][1,1] = -0.22791948943117624
-weights[[3]][1,2] =  0.581714099641357
- biases[[3]][1] =    0.7792991203673414
+# # H1 receiving weights
+# weights[[2]][1,1] = -0.06782947598673161
+# weights[[2]][1,2] =  0.22341077197888182
+#  biases[[2]][1] =   -0.4635107399577998
+# 
+# # H2 receiving weights
+# weights[[2]][2,1] =  0.9487814395569221
+# weights[[2]][2,2] =  0.46158711646254
+#  biases[[2]][2] =    0.09750161997450091
+# 
+# # o1 receiving weights
+# weights[[3]][1,1] = -0.22791948943117624
+# weights[[3]][1,2] =  0.581714099641357
+#  biases[[3]][1] =    0.7792991203673414
 
 # iris.scale = scale(iris[,1:4])
 # species.n = as.integer(iris$Species)
@@ -372,9 +380,20 @@ training[[2]]=list(c(1,0),c(1))
 training[[3]]=list(c(0,1),c(1))
 training[[4]]=list(c(1,1),c(0))
 
-E = list()
+initNetwork(c(2,3,1))
+MSE1 = SGD(training, 1000, 4, 0.7, 0.0, training)
+initNetwork(c(2,3,1))
+MSE2 = SGD(training, 1000, 4, 0.7, 0.3, training)
 
-SGD(training, 1000, 4, 0.7, 0.3, training)
+library(reshape2)
+library(ggplot2)
+library(dplyr)
+data.frame(epoch=1:1000, MSE1=MSE1, MSE2=MSE2) %>% 
+  melt(id="epoch") %>% 
+  ggplot(
+    aes(x=epoch, y=value, colour=variable)) +
+    geom_line()
+  
 
 # ffz = list()
 # ffa = list()
