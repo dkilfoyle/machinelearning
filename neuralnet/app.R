@@ -104,6 +104,8 @@ server <- function(input, output) {
        
        nodes$level[nid] = l
        nodes$shape="circle"
+       nodes$value = activations[[l]][n]
+       nodes$title = round(activations[[l]][n],2)
        
        nid = nid + 1
      }
@@ -113,18 +115,31 @@ server <- function(input, output) {
    for (l in num.layers:2) {
      for (n in 1:sizes[l]) {
        for (nprev in 1:sizes[l-1]) {
+         
+         # convert weight into range 0..1
+         ws = max(abs(weights[[l]]))
+         w = weights[[l]][n,nprev]
+         wc = max(w,-1)
+         wc = min(wc,1)
+         wc = (w + ws)/(ws*2)
+         
          edges = rbind(edges, data.frame(
            from = paste0("L",l-1,"N",nprev),
            to = paste0("L",l,"N",n),
            label = round(weights[[l]][n,nprev],2),
-           arrows = "to"
+           value = round(weights[[l]][n,nprev],2),
+           arrows = "to",
+           color = rgb(colorRamp(c("blue","red"))(wc),max=255)
          ))
        }
      }
    }
    
    visNetwork(nodes, edges) %>% 
-     visHierarchicalLayout(direction = "LR") 
+     visHierarchicalLayout(direction = "LR") %>% 
+     visEdges(scaling=list(max=5, label=list(enabled=F))) %>%  #TODO: customs scaling function for negative values
+     visNodes(scaling=list(max=5)) %>% 
+     visInteraction(hover = TRUE)
  })
    
    
