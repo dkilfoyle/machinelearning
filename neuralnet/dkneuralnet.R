@@ -287,6 +287,7 @@ evaluate = function(test_data) {
 initNetwork <- function(sizes) {
   set.seed(12345)
   num.layers<<-length(sizes)
+  sizes<<-sizes
   
   # generate a vector for each layer containing biases for each neuron. \
   # layer 1 doesnt need a bias
