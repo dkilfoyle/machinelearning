@@ -4,12 +4,16 @@ library(ggplot2)
 library(dplyr)
 library(visNetwork)
 
-source("dkneuralnet.R")
+source("dkneuralnet2.R")
 
 rValues = reactiveValues(MSE.df = data.frame(epoch=c(), MSE=c()))
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+  
+  shiny::tags$head(shiny::tags$style(shiny::HTML(
+    "#consoleOutput { font-size: 11pt; height: 400px; overflow: auto; }"
+  ))),
    
    # Application title
    titlePanel("NeuralNet"),
@@ -20,10 +24,12 @@ ui <- fluidPage(
      sidebarPanel(
        radioButtons("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
        numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
+       checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=T),
        numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100),
        numericInput("nHidden","Number Hidden Neurons:", 2, min=0, max=100),
-       numericInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
-       numericInput("nMomentum","Momentum:", 0.1, min=0, max=1, step=0.1),
+       selectInput("sMethod","Method:",c("Standard","RPROP")),
+       sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
+       sliderInput("nMomentum","Momentum:", 0.1, min=0, max=1, step=0.1),
        textInput("tRun","Run Name:", "Run1"),
        actionButton("go","Go!")
      ),
@@ -31,7 +37,7 @@ ui <- fluidPage(
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(
-          tabPanel("Console", verbatimTextOutput("console")),
+          tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
           tabPanel("Plot", plotOutput("distPlot")),
           tabPanel("Network", visNetworkOutput("network"))
         )
@@ -42,10 +48,6 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  getMSE = reactive({
-    return(MSE.df)
-  })
-   
   getTrainedNetwork = eventReactive(input$go, {
     training=list()
     training[[1]]=list(c(0,0),c(0))
@@ -53,72 +55,94 @@ server <- function(input, output) {
     training[[3]]=list(c(0,1),c(1))
     training[[4]]=list(c(1,1),c(0))
     
-    initNetwork(c(2,input$nHidden,1))
-    
     progress = shiny::Progress$new(style="notification")
     progress$set(message="Training", value=0)
     on.exit(progress$close())
     
-    MSE = SGD(training, input$nEpochs, 
-      (input$nBatchSize/100)*length(training),
-      input$nTraining,
-      input$nMomentum,
-      training,
-      progressFn=function(x) progress$set(x)
-    )
-    rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=MSE, run=input$tRun))
+    # initNetwork(c(2,input$nHidden,1))
+    
+    net = netInit(c(2,input$nHidden,1)) %>% 
+      netProgressFn(function(x) progress$set(x))
+    
+    if (input$sMethod == "Standard") {
+      net = net %>% 
+        netStandardGradientDescent(eta=input$nTraining, momentum=input$nMomentum)
+    }
+    else if (input$sMethod=="RPROP") {
+      net = net %>% 
+        netRPROPGradientDescent()
+    }
+    
+    net = net %>% 
+      netTrain(training, epochs=input$nEpochs, mini.batch.size=input$nBatchSize, randomEpoch=input$bRandomEpoch)
+
+    # MSE = SGD(training, input$nEpochs, 
+    #   input$bRandomEpoch, 
+    #   (input$nBatchSize/100)*length(training),
+    #   input$sMethod,
+    #   input$nTraining,
+    #   input$nMomentum,
+    #   training,
+    #   progressFn=function(x) progress$set(x)
+    # )
+    
+    return(net)
   })
   
-  output$console = renderPrint({
+  output$consoleOutput = renderPrint({
     getTrainedNetwork()
   })
   
  output$distPlot <- renderPlot({
-   rValues$MSE.df %>%
-     # melt(id="epoch") %>%
-     ggplot(
-       aes(x=epoch, y=MSE, colour=run)) +
-     geom_line()
+   net = getTrainedNetwork()
+   isolate({
+     rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$tRun))
+     rValues$MSE.df %>%
+       ggplot(aes(x=epoch, y=MSE, colour=run)) +
+        geom_line() +
+        ylim(0,1)
+   })
+
    # 
  })
  
  output$network = renderVisNetwork({
    
-   getTrainedNetwork()
+   net=getTrainedNetwork()
    
-   nodes = data.frame(id = 1:sum(sizes))
+   nodes = data.frame(id = 1:sum(net$sizes))
    edges = data.frame()
    
    nid = 1
-   for (l in 1:num.layers) {
-     for (n in 1:sizes[l]) {
+   for (l in 1:net$num.layers) {
+     for (n in 1:net$sizes[l]) {
        
        nodes$id[nid] = paste0("L",l,"N",n)
        
        if (l==1)
          nodes$label[nid] = paste0("I",n)
-       else if (l==num.layers)
+       else if (l==net$num.layers)
          nodes$label[nid] = paste0("O",n)
        else
          nodes$label[nid] = paste0("H",n)
        
        nodes$level[nid] = l
        nodes$shape="circle"
-       nodes$value = activations[[l]][n]
-       nodes$title = round(activations[[l]][n],2)
+       nodes$value = net$activations[[l]][n]
+       nodes$title = round(net$activations[[l]][n],2)
        
        nid = nid + 1
      }
    }
    
    eid = 1
-   for (l in num.layers:2) {
-     for (n in 1:sizes[l]) {
-       for (nprev in 1:sizes[l-1]) {
+   for (l in net$num.layers:2) {
+     for (n in 1:net$sizes[l]) {
+       for (nprev in 1:net$sizes[l-1]) {
          
          # convert weight into range 0..1
-         ws = max(abs(weights[[l]]))
-         w = weights[[l]][n,nprev]
+         ws = max(abs(net$weights[[l]]))
+         w = net$weights[[l]][n,nprev]
          wc = max(w,-1)
          wc = min(wc,1)
          wc = (w + ws)/(ws*2)
@@ -126,8 +150,8 @@ server <- function(input, output) {
          edges = rbind(edges, data.frame(
            from = paste0("L",l-1,"N",nprev),
            to = paste0("L",l,"N",n),
-           label = round(weights[[l]][n,nprev],2),
-           value = round(weights[[l]][n,nprev],2),
+           label = round(net$weights[[l]][n,nprev],2),
+           value = round(net$weights[[l]][n,nprev],2),
            arrows = "to",
            color = rgb(colorRamp(c("blue","red"))(wc),max=255)
          ))

@@ -1,11 +1,10 @@
 # test4 = RPROP
-dkdebug=T
 
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
 
 dksign = function(x) {
-  if (abs(x) < 0.0000000000001)
+  if (abs(x) < 0.0000001)
     return(0)
   else if (x > 0)
     return(1)
@@ -26,11 +25,13 @@ solveForward = function(a) {
 # Run throught the trianing data epoch number of times
 # For each run process training data in batches of mini.batch.size
 # only update the weights once per mini.batch using the batches average gradient vector
-SGD = function(training.data, epochs, mini.batch.size, eta, momentum, test.data=NULL, progressFn=NULL) {
+SGD = function(training.data, epochs, randomEpoch, mini.batch.size, method, eta, momentum, test.data=NULL, progressFn=NULL) {
   
   n = length(training.data)
   MSE = numeric(epochs)
-  epochUpdateFreq=50
+  epochUpdateFreq=1
+  
+  cat("Training data: Length",n,", Epochs:",epochs,"Batch Size:",mini.batch.size,"\n")
   
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
@@ -39,10 +40,10 @@ SGD = function(training.data, epochs, mini.batch.size, eta, momentum, test.data=
     # process training data in batches of mini.batch.size
     for (i in seq(1, n, mini.batch.size)) {
       # sample(1:n) randomizes the order of the training data
-      if (dkdebug) # don't randomise order
-        MSE[j] = MSE[j] + do.mini.batch(training.data[i:(i+mini.batch.size-1)], eta, momentum)
+      if (randomEpoch) # randomise orderering of training data each epoch
+        MSE[j] = MSE[j] + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], method, eta, momentum)
       else
-        MSE[j] = MSE[j] + do.mini.batch(training.data[sample(1:n)[i:(i+mini.batch.size-1)]], eta, momentum)
+        MSE[j] = MSE[j] + do.mini.batch(training.data[i:(i+mini.batch.size-1)], method, eta, momentum)
     }
     
     MSE[j] = MSE[j]/n
@@ -66,7 +67,7 @@ SGD = function(training.data, epochs, mini.batch.size, eta, momentum, test.data=
 # 2) backPropogate to generate error gradients for each weight (partial derivative of error with respect to weight )
 # 3) average the error gradients across the mini batch
 # 4) update weights based on error gradient and learning rate eta
-do.mini.batch = function(mini.batch, eta, momentum) {
+do.mini.batch = function(mini.batch, method, eta, momentum) {
   
   # Zero the gradient vectors using the same shape as the source 
   nabla_sum.b = lapply(biases, function(x) x*0)
@@ -100,8 +101,12 @@ do.mini.batch = function(mini.batch, eta, momentum) {
   # nabla_avg.w = lapply(nabla_sum.w, function(x) x/m)
   # nabla_avg.b = lapply(nabla_sum.b, function(x) x/m)
   
-  updateWeights(nabla_sum.w, nabla_sum.b, eta, momentum)
-  # updateWeightsRPROP(nabla_sum.w, nabla_sum.b)
+  if (method=="Standard")
+    updateWeights(nabla_sum.w, nabla_sum.b, eta, momentum)
+  else if (method=="RPROP")
+    updateWeightsRPROP(nabla_sum.w, nabla_sum.b)
+  else
+    stop("Invalid method")
     
   return (MSE)
 }
@@ -285,12 +290,13 @@ evaluate = function(test_data) {
 }
   
 initNetwork <- function(sizes) {
-  set.seed(12345)
+  # set.seed(12345)
   num.layers<<-length(sizes)
   sizes<<-sizes
   
   # generate a vector for each layer containing biases for each neuron. \
   # layer 1 doesnt need a bias
+  biases<<-list()
   biases <<- lapply(sizes, rnorm)
   biases[[1]] <<- NA
   
@@ -310,6 +316,7 @@ initNetwork <- function(sizes) {
   # 1 row for each receiving neuron r in layer l
   # 1 col for each sending neuron s in layer l-1
 
+  weights<<-list()
   weights <<- lapply(1:num.layers, function(l) {
     if (l==1) return(matrix()) # layer 1 doesn't need weights
     matrix(rnorm(sizes[l]*sizes[l-1]),
@@ -346,9 +353,22 @@ initNetwork <- function(sizes) {
   z <<- list()
   updateValues <<- list()
   lastDelta <<- list()
+  
+  # # H1 receiving weights
+  # weights[[2]][1,1] <<- -0.06782947598673161
+  # weights[[2]][1,2] <<-  0.22341077197888182
+  # biases[[2]][1] <<-   -0.4635107399577998
+  # 
+  # # H2 receiving weights
+  # weights[[2]][2,1] <<-  0.9487814395569221
+  # weights[[2]][2,2] <<-  0.46158711646254
+  # biases[[2]][2] <<-    0.09750161997450091
+  # 
+  # # o1 receiving weights
+  # weights[[3]][1,1] <<- -0.22791948943117624
+  # weights[[3]][1,2]<<-  0.581714099641357
+  # biases[[3]][1] <<-    0.7792991203673414
 }
-
-weights = list()
 
 
 
