@@ -27,9 +27,10 @@ ui <- fluidPage(
        numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
        checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=T),
        numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100),
-       numericInput("nHidden","Number Hidden Neurons:", 2, min=0, max=100),
+       numericInput("nHidden1","Layer2 Hidden Neurons:", 2, min=0, max=100),
+       numericInput("nHidden2","Layer3 Hidden Neurons:", 0, min=0, max=100),       
        radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)"),selected="sd=1/sqrt(n)"),
-       selectInput("sMethod","Method:",c("Standard","RPROP")),
+       selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="RPROP"),
        sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
        sliderInput("nMomentum","Momentum:", 0.4, min=0, max=1, step=0.1),
        textInput("txtRun","Run Name:", "Run_1"),
@@ -68,7 +69,12 @@ server <- function(session, input, output) {
     else
       sd.method = "1.0"
     
-    net = netInit(c(2,input$nHidden,1), sd.method=sd.method) %>% 
+    if (input$nHidden2 > 0)
+      sizes = c(2, input$nHidden1, input$nHidden2, 1)
+    else
+      sizes = c(2, input$nHidden1, 1)
+    
+    net = netInit(sizes, sd.method=sd.method) %>% 
       netProgressFn(function(x) progress$set(x))
     
     if (input$sMethod == "Standard") {
