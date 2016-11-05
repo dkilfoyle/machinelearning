@@ -249,7 +249,8 @@ updateWeightsRPROP = function(net, nabla.w, nabla.b) {
 }
 
 getRPROPWtChanges.w = function(net, gradients, l) {
-  wtChanges = matrix(nrow=nrow(gradients),ncol=ncol(gradients))
+  # store this layers wtchanges
+  net$wtChange.w = matrix(nrow=nrow(gradients),ncol=ncol(gradients))
   
   for (i in 1:nrow(gradients)) {
     for (j in 1:ncol(gradients)) {
@@ -285,14 +286,15 @@ getRPROPWtChanges.w = function(net, gradients, l) {
         net$lastGradients.w[[l]][i,j] = gradient
       }
       
-      net$wtChanges[i,j] = weightChange
+      net$wtChange.w[i,j] = weightChange
     }
   }
   return (net)
 }
 
 getRPROPWtChanges.b = function(net, gradients, l) {
-  wtChanges = numeric(nrow(gradients))
+  net$wtChange.b = numeric(nrow(gradients))
+  
   for (i in 1:nrow(gradients)) {
     
       gradient = gradients[i]
@@ -326,7 +328,7 @@ getRPROPWtChanges.b = function(net, gradients, l) {
         net$lastGradients.b[[l]][i] = gradient
       }
       
-      net$wtChanges[i]=weightChange
+      net$wtChange.b[i]=weightChange
     }
   return (net)
 }
@@ -450,7 +452,7 @@ netInit <- function(sizes, sd.method="sqrtn") {
   )
   
   return(x %>% 
-      netStandardGradientDescent() %>% 
+      netRPROPGradientDescent() %>% 
       netProgressFn())
 }
 
