@@ -64,7 +64,10 @@ netProgressFn = function(net, fn=NULL) {
 # Run throught the trianing data epoch number of times
 # For each run process training data in batches of mini.batch.size
 # only update the weights once per mini.batch using the batches average gradient vector
-netTrain = function(net, training.data, epochs=500, mini.batch.size=100, epochUpdateFreq=10, randomEpoch=T, test.data=NULL) {
+netTrain = function(net, training.data, 
+  epochs=500, mini.batch.size=100,
+  epochUpdateFreq=10, randomEpoch=T,
+  test.data=NULL) {
   
   n = length(training.data)
   mini.batch.n = round(mini.batch.size/100 * n,0)
@@ -342,7 +345,7 @@ evaluate = function(test_data) {
   return(correct)
 }
   
-netInit <- function(sizes) {
+netInit <- function(sizes, sd.method="sqrtn") {
   # set.seed(12345)
   num.layers=length(sizes)
   sizes=sizes
@@ -367,13 +370,17 @@ netInit <- function(sizes) {
   # to allow use of dot products the matrix is organized
   # 1 row for each receiving neuron r in layer l
   # 1 col for each sending neuron s in layer l-1
-
+  
   weights = lapply(1:num.layers, function(l) {
     if (l==1) return(matrix()) # layer 1 doesn't need weights
-    matrix(rnorm(sizes[l]*sizes[l-1]),
-      nrow = sizes[l],
-      ncol = sizes[l-1]
-    )
+    if ((sd.method=="sqrtn") & (l!=num.layers))
+      # squeeze the weights into a narrower range to prevent saturation of the output function
+      weight.sd = 1/sqrt(sizes[l-1])
+    else
+      weight.sd = 1.0
+    matrix(rnorm(sizes[l]*sizes[l-1], sd=weight.sd),
+        nrow = sizes[l],
+        ncol = sizes[l-1])
   })
   
   lastGradients.w = lapply(1:num.layers, function(l) {

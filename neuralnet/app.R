@@ -6,7 +6,8 @@ library(visNetwork)
 
 source("dkneuralnet2.R")
 
-rValues = reactiveValues(MSE.df = data.frame(epoch=c(), MSE=c()))
+rValues = reactiveValues(MSE.df = data.frame(epoch=c(), MSE=c()),
+  run.n=1)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -27,10 +28,13 @@ ui <- fluidPage(
        checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=T),
        numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100),
        numericInput("nHidden","Number Hidden Neurons:", 2, min=0, max=100),
+       radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)"),selected="sd=1/sqrt(n)"),
        selectInput("sMethod","Method:",c("Standard","RPROP")),
        sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
-       sliderInput("nMomentum","Momentum:", 0.1, min=0, max=1, step=0.1),
-       textInput("tRun","Run Name:", "Run1"),
+       sliderInput("nMomentum","Momentum:", 0.4, min=0, max=1, step=0.1),
+       textInput("txtRun","Run Name:", "Run_1"),
+       actionButton("btnClearRuns","Clear Runs"),
+       actionButton("go1","Step 1"),
        actionButton("go","Go!")
      ),
       
@@ -46,7 +50,7 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(session, input, output) {
   
   getTrainedNetwork = eventReactive(input$go, {
     training=list()
@@ -59,9 +63,12 @@ server <- function(input, output) {
     progress$set(message="Training", value=0)
     on.exit(progress$close())
     
-    # initNetwork(c(2,input$nHidden,1))
+    if (input$rbWeightSD == "sd=1/sqrt(n)")
+      sd.method = "sqrtn"
+    else
+      sd.method = "1.0"
     
-    net = netInit(c(2,input$nHidden,1)) %>% 
+    net = netInit(c(2,input$nHidden,1), sd.method=sd.method) %>% 
       netProgressFn(function(x) progress$set(x))
     
     if (input$sMethod == "Standard") {
@@ -86,7 +93,18 @@ server <- function(input, output) {
     #   progressFn=function(x) progress$set(x)
     # )
     
+    rValues$run.n = rValues$run.n + 1
+    
     return(net)
+  })
+  
+  observeEvent(rValues$run.n, {
+    updateTextInput(session, "txtRun", value=paste0("Run_",rValues$run.n))
+  })
+  
+  observeEvent(input$btnClearRuns, {
+    rValues$MSE.df = data.frame(epoch=c(), MSE=c())
+    rValues$run.n=1
   })
   
   output$consoleOutput = renderPrint({
@@ -96,7 +114,7 @@ server <- function(input, output) {
  output$distPlot <- renderPlot({
    net = getTrainedNetwork()
    isolate({
-     rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$tRun))
+     rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
      rValues$MSE.df %>%
        ggplot(aes(x=epoch, y=MSE, colour=run)) +
         geom_line() +
