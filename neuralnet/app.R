@@ -44,7 +44,10 @@ ui <- fluidPage(
         tabsetPanel(
           tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
           tabPanel("Plot", plotOutput("distPlot")),
-          tabPanel("Network", visNetworkOutput("network"))
+          tabPanel("Network",
+            radioButtons("rbVisEdges","Edges:", c("weights","biases","updateValues.w","lastWtChanges.w","lastWtChanges.b",
+              "nabla_sum.w")),
+            visNetworkOutput("network"))
         )
       )
    )
@@ -174,11 +177,12 @@ server <- function(session, input, output) {
          edges = rbind(edges, data.frame(
            from = paste0("L",l-1,"N",nprev),
            to = paste0("L",l,"N",n),
-           label = round(net$weights[[l]][n,nprev],2),
-           value = round(net$weights[[l]][n,nprev],2),
+           label = round(net[[input$rbVisEdges]][[l]][n,nprev],2),
+           value = round(net[[input$rbVisEdges]][[l]][n,nprev],2),
            arrows = "to",
            color = rgb(colorRamp(c("blue","red"))(wc),max=255)
          ))
+           
        }
      }
    }

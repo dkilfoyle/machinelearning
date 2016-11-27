@@ -26,7 +26,7 @@ mergeLists <- function (base_list, overlay_list, recursive = TRUE) {
 }
 
 dksign = function(x) {
-  if (abs(x) < 0.0000001)
+  if (abs(x) < 0.00000000000000001)
     return(0)
   else if (x > 0)
     return(1)
@@ -89,7 +89,7 @@ netTrain = function(net, training.data,
       MSE[j] = MSE[j] + net$mbMSE
     }
     
-    MSE[j] = MSE[j]/n
+    # MSE[j] = MSE[j]/n
 
     if ((j==1) | ((j %% epochUpdateFreq)==0)) {
       cat("Epoch ", j, " ",sep="")
@@ -147,6 +147,9 @@ SGD.mini.batch = function(net, mini.batch) {
   # calculate the average gradient for the minibatch
   # nabla_avg.w = lapply(nabla_sum.w, function(x) x/m)
   # nabla_avg.b = lapply(nabla_sum.b, function(x) x/m)
+  
+  net$nabla_sum.w = nabla_sum.w
+  net$nabla_sum.b = nabla_sum.b
   
   if (net$SGD.method=="standard")
     net = updateWeightsStandard(net, nabla_sum.w, nabla_sum.b)
@@ -271,7 +274,7 @@ getRPROPWtChanges.w = function(net, gradients, l) {
       } else if (gradientChange < 0) {
         # gradient has changed its sign
         # we overshot the mark, the delta was too big
-        delta = max(net$updateValues.w[[l]][i,j] * 0.5, 0.0000001) # reduce the delta
+        delta = max(net$updateValues.w[[l]][i,j] * 0.5, 0.000001) # reduce the delta
         weightChange = -net$lastWtChanges.w[[l]][i,j] # go back to previous weight before overshooting mark
 
         net$updateValues.w[[l]][i,j] = delta
@@ -279,7 +282,7 @@ getRPROPWtChanges.w = function(net, gradients, l) {
       
       } else { 
         # change.w == 0
-        # gradient hasn't changed at all
+        # no change to delta
         delta = net$updateValues.w[[l]][i,j]
         weightChange = dksign(gradient) * delta
         
@@ -287,6 +290,9 @@ getRPROPWtChanges.w = function(net, gradients, l) {
       }
       
       net$wtChange.w[i,j] = weightChange
+      
+      # if (abs(weightChange) < 0.001)
+      #   browser()
     }
   }
   return (net)
@@ -491,8 +497,28 @@ testnet = function() {
   training[[2]]=list(c(1,0),c(1))
   training[[3]]=list(c(0,1),c(1))
   training[[4]]=list(c(1,1),c(0))
-  x=netInit(c(2,2,1)) %>% 
-    netTrain(training)
+  
+  net=netInit(c(2,2,1))
+  
+  # H1 receiving weights
+  weights[[2]][1,1] = -0.06782947598673161
+  weights[[2]][1,2] =  0.22341077197888182
+   biases[[2]][1] =   -0.4635107399577998
+
+  # H2 receiving weights
+  weights[[2]][2,1] =  0.9487814395569221
+  weights[[2]][2,2] =  0.46158711646254
+   biases[[2]][2] =    0.09750161997450091
+
+  # o1 receiving weights
+  weights[[3]][1,1] = -0.22791948943117624
+  weights[[3]][1,2] =  0.581714099641357
+   biases[[3]][1] =    0.7792991203673414
+   
+   net=netTrain(net, training, epochs=100, epochUpdateFreq=1)
+  
+  # x=netInit(c(2,2,1)) %>% 
+  #   netTrain(training, epochs=100, epochUpdateFreq=1)
 }
 
 
