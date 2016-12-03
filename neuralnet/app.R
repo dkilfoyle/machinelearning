@@ -7,9 +7,8 @@ library(visNetwork)
 source("dkneuralnet2.R")
 
 rValues = reactiveValues(MSE.df = data.frame(epoch=c(), MSE=c()),
-  run.n=1)
+  run.n=1, rnet=list())
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
   
   shiny::tags$head(shiny::tags$style(shiny::HTML(
@@ -25,14 +24,14 @@ ui <- fluidPage(
      sidebarPanel(
        radioButtons("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
        numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
-       checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=T),
-       numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100),
+       checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=F),
+       numericInput("nBatchSize", "Batch Size %:", 100, min=0, max=100),
        numericInput("nHidden1","Layer2 Hidden Neurons:", 2, min=0, max=100),
        numericInput("nHidden2","Layer3 Hidden Neurons:", 0, min=0, max=100),       
-       radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)"),selected="sd=1/sqrt(n)"),
-       selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="RPROP"),
+       radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)"),selected="sd=1.0"),
+       selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="Standard"),
        sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
-       sliderInput("nMomentum","Momentum:", 0.4, min=0, max=1, step=0.1),
+       sliderInput("nMomentum","Momentum:", 0.3, min=0, max=1, step=0.1),
        textInput("txtRun","Run Name:", "Run_1"),
        actionButton("btnClearRuns","Clear Runs"),
        actionButton("go1","Step 1"),
@@ -45,41 +44,39 @@ ui <- fluidPage(
           tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
           tabPanel("Plot", plotOutput("distPlot")),
           tabPanel("Network",
-            radioButtons("rbVisEdges","Edges:", c("weights","biases","updateValues.w","lastWtChanges.w","lastWtChanges.b",
-              "nabla_sum.w")),
+            radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","nabla.w", "lastWtChanges.w")),
+            radioButtons("rbVisNodes","Nodes:", c("z","activations","delta")),
             visNetworkOutput("network"))
         )
       )
    )
 )
 
-# Define server logic required to draw a histogram
 server <- function(session, input, output) {
   
-  getTrainedNetwork = eventReactive(input$go, {
+  getTrainingData = function() {
     training=list()
     training[[1]]=list(c(0,0),c(0))
     training[[2]]=list(c(1,0),c(1))
     training[[3]]=list(c(0,1),c(1))
     training[[4]]=list(c(1,1),c(0))
-    
-    progress = shiny::Progress$new(style="notification")
-    progress$set(message="Training", value=0)
-    on.exit(progress$close())
-    
+    return(training)
+  }
+  
+  initNetwork = function() {
     if (input$rbWeightSD == "sd=1/sqrt(n)")
       sd.method = "sqrtn"
     else
       sd.method = "1.0"
     
+    # TODO: Calculate input and output layer neuron size from training data
     if (input$nHidden2 > 0)
       sizes = c(2, input$nHidden1, input$nHidden2, 1)
     else
       sizes = c(2, input$nHidden1, 1)
     
-    net = netInit(sizes, sd.method=sd.method) %>% 
-      netProgressFn(function(x) progress$set(x))
-    
+    net = netInit(sizes, sd.method=sd.method)
+
     if (input$sMethod == "Standard") {
       net = net %>% 
         netStandardGradientDescent(eta=input$nTraining, momentum=input$nMomentum)
@@ -89,22 +86,48 @@ server <- function(session, input, output) {
         netRPROPGradientDescent()
     }
     
-    net = net %>% 
-      netTrain(training, epochs=input$nEpochs, mini.batch.size=input$nBatchSize, randomEpoch=input$bRandomEpoch)
-
-    # MSE = SGD(training, input$nEpochs, 
-    #   input$bRandomEpoch, 
-    #   (input$nBatchSize/100)*length(training),
-    #   input$sMethod,
-    #   input$nTraining,
-    #   input$nMomentum,
-    #   training,
-    #   progressFn=function(x) progress$set(x)
-    # )
+    # initial weights to mimic example http://www.heatonresearch.com/aifh/vol3/xor_online.html
     
-    rValues$run.n = rValues$run.n + 1
+    # H1 receiving weights
+    net$weights[[2]][1,1] = -0.06782947598673161
+    net$weights[[2]][1,2] =  0.22341077197888182
+    net$biases[[2]][1] = -0.4635107399577998
+    
+    # H2 receiving weights
+    net$weights[[2]][2,1] =  0.9487814395569221
+    net$weights[[2]][2,2] =  0.46158711646254
+    net$biases[[2]][2] =    0.09750161997450091
+    
+    # o1 receiving weights
+    net$weights[[3]][1,1] = -0.22791948943117624
+    net$weights[[3]][1,2] =  0.581714099641357
+    net$biases[[3]][1] =    0.7792991203673414
     
     return(net)
+  }
+  
+  observeEvent(input$go, {
+    
+    progress = shiny::Progress$new(style="notification")
+    progress$set(message="Training", value=0)
+    on.exit(progress$close())
+    
+    net = initNetwork() %>% 
+      netProgressFn(function(x) progress$set(x)) %>% 
+      netTrain(getTrainingData(), epochs=input$nEpochs, mini.batch.percent=input$nBatchSize, randomEpoch=input$bRandomEpoch)
+    
+    rValues$run.n = rValues$run.n + 1
+    rValues$rnet = net
+  })
+  
+  observeEvent(input$go1, {
+    if (is.null(rValues$rnet$step))
+      net = initNetwork()
+    else
+      net = rValues$rnet
+    net = netTrainStep(net, getTrainingData())
+    
+    rValues$rnet = net
   })
   
   observeEvent(rValues$run.n, {
@@ -114,14 +137,15 @@ server <- function(session, input, output) {
   observeEvent(input$btnClearRuns, {
     rValues$MSE.df = data.frame(epoch=c(), MSE=c())
     rValues$run.n=1
+    rValues$rnet = list()
   })
   
   output$consoleOutput = renderPrint({
-    getTrainedNetwork()
+    net = rValues$rnet
   })
   
  output$distPlot <- renderPlot({
-   net = getTrainedNetwork()
+   net = rValues$rnet
    isolate({
      rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
      rValues$MSE.df %>%
@@ -135,34 +159,52 @@ server <- function(session, input, output) {
  
  output$network = renderVisNetwork({
    
-   net=getTrainedNetwork()
+   net=rValues$rnet
    
-   nodes = data.frame(id = 1:sum(net$sizes))
+   nodes = data.frame() 
    edges = data.frame()
    
-   nid = 1
    for (l in 1:net$num.layers) {
      for (n in 1:net$sizes[l]) {
        
-       nodes$id[nid] = paste0("L",l,"N",n)
-       
        if (l==1)
-         nodes$label[nid] = paste0("I",n)
+         label = paste0("I",n)
        else if (l==net$num.layers)
-         nodes$label[nid] = paste0("O",n)
+         label = paste0("O",n)
        else
-         nodes$label[nid] = paste0("H",n)
+         label = paste0("H",n)
        
-       nodes$level[nid] = l
-       nodes$shape="circle"
-       nodes$value = net$activations[[l]][n]
-       nodes$title = round(net$activations[[l]][n],2)
+       value = net[[input$rbVisNodes]][[l]][n]
+       if (is.null(value)) {
+         title = 0
+         value = 0
+       }
+       else
+       {
+         title = round(value,3)
+       }
        
-       nid = nid + 1
+       nodes = rbind(nodes, data.frame(
+         id = paste0("L",l,"N",n),
+         label = label,
+         level = l,
+         shape = "circle",
+         value = value,
+         title = title
+       ))
      }
+       
+   if (l > 1)
+     nodes = rbind(nodes, data.frame(
+       id = paste0("L",l,"B"),
+       label = paste0("B",l),
+       level=l,
+       shape="circle",
+       value = 1,
+       title = 1
+     ))
    }
    
-   eid = 1
    for (l in net$num.layers:2) {
      for (n in 1:net$sizes[l]) {
        for (nprev in 1:net$sizes[l-1]) {
@@ -177,12 +219,29 @@ server <- function(session, input, output) {
          edges = rbind(edges, data.frame(
            from = paste0("L",l-1,"N",nprev),
            to = paste0("L",l,"N",n),
-           label = round(net[[input$rbVisEdges]][[l]][n,nprev],2),
-           value = round(net[[input$rbVisEdges]][[l]][n,nprev],2),
+           label = round(net[[input$rbVisEdges]][[l]][n,nprev],3),
+           value = round(net[[input$rbVisEdges]][[l]][n,nprev],3),
            arrows = "to",
            color = rgb(colorRamp(c("blue","red"))(wc),max=255)
          ))
            
+       }
+       
+       if (l > 1) {
+         if (input$rbVisEdges == "weights")
+           value = net$biases[[l]][n]
+         else if (input$rbVisEdges == "nabla.w")
+           value = net$nabla.b[[l]][n]
+         else if (input$rbVisEdges == "lastWtChanges.w")
+           value = net$lastWtChanges.b[[l]][n]
+         edges = rbind(edges, data.frame(
+           from = paste0("L",l,"B"),
+           to = paste0("L",l,"N",n),
+           label=round(value,3),
+           value=value,
+           arrows="to",
+           color = rgb(0.5,0.5,0.5)
+         ))
        }
      }
    }

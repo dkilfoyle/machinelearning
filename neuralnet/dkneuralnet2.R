@@ -65,47 +65,65 @@ netProgressFn = function(net, fn=NULL) {
 # For each run process training data in batches of mini.batch.size
 # only update the weights once per mini.batch using the batches average gradient vector
 netTrain = function(net, training.data, 
-  epochs=500, mini.batch.size=100,
+  epochs=500, mini.batch.percent=10,
   epochUpdateFreq=10, randomEpoch=T,
   test.data=NULL) {
   
   n = length(training.data)
-  mini.batch.n = round(mini.batch.size/100 * n,0)
-  MSE = numeric(epochs)
+  if (mini.batch.percent==0)
+    mini.batch.n = 1 # ie on-line training
+  else
+    mini.batch.n = round(mini.batch.percent/100 * n,0)
+  net$MSE = numeric(epochs)
   
-  cat("Training data: Length",n,", Epochs:",epochs,"Batch Size:",mini.batch.size,"\n")
+  cat("Training data: Length",n,", Epochs:",epochs,"Batch Size:",mini.batch.n,"\n")
   
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
-    MSE[j] = 0.0 # Squared Error for averaging
+    net$SSE = 0.0 # Squared Error for averaging
     
     # process training data in batches of mini.batch.size
     for (i in seq(1, n, mini.batch.n)) {
+      
       # sample(1:n) randomizes the order of the training data
       if (randomEpoch) # randomise orderering of training data each epoch
         net = SGD.mini.batch(net, training.data[sample(1:n)[i:(i+mini.batch.n-1)]])
       else
         net = SGD.mini.batch(net, training.data[i:(i+mini.batch.n-1)])
-      MSE[j] = MSE[j] + net$mbMSE
     }
     
-    # MSE[j] = MSE[j]/n
+    net$MSE[j] = net$SSE/n
 
     if ((j==1) | ((j %% epochUpdateFreq)==0)) {
       cat("Epoch ", j, " ",sep="")
       # evaluate the net at the end of this epoch using test data
       if (!(is.null(test.data)))
         cat(evaluate(test.data), "/",length(test.data))
-      cat(" MSE = ", MSE[j], "\n", sep="")
+      cat(" MSE = ", net$MSE[j], "\n", sep="")
     }
     
     if (!is.null(net$progressFn)) net$progressFn(j/epochs)
   }
   
-  net$MSE = MSE
+  return(net)
+}
+
+netTrainStep = function(net, training.data, test.data=NULL) {
+  if (net$step==0) {
+    net$MSE = numeric(500) # 500 max steps
+    net$SSE = 0
+    net$step = 1
+  }
+  
+  net = SGD.mini.batch(net, training.data[net$step])
+  
+  net$step = net$step + 1
+  if (net$step > length(training.data)) {
+    net$step = 1
+  }
   
   return(net)
-}  
+}
 
 # Process a mini batch = for each x in mini batch:
 # 1) feedForward to generate current activations
@@ -118,8 +136,6 @@ SGD.mini.batch = function(net, mini.batch) {
   nabla_sum.b = lapply(net$biases, function(x) x*0)
   nabla_sum.w = lapply(net$weights, function(x) x*0)
   
-  MSE = 0.0 # total squared error for minibatch
-  
   # calculate and sum the gradient vector for each x in mini.batch
   m = length(mini.batch)
   for (i in 1:m) {
@@ -131,22 +147,15 @@ SGD.mini.batch = function(net, mini.batch) {
     
     # Back propogation
     # calculate gradient vector based on a single training sample x
-    nabla.x = backPropogate(net, x[[1]], x[[2]]) 
+    net = backPropogate(net, x[[1]], x[[2]]) 
     
     # running total for all x in this minibatch
     for (l in 2:net$num.layers) {
-      nabla_sum.b[[l]] = nabla_sum.b[[l]] + nabla.x$b[[l]]
-      nabla_sum.w[[l]] = nabla_sum.w[[l]] + nabla.x$w[[l]]
+      nabla_sum.b[[l]] = nabla_sum.b[[l]] + net$nabla.b[[l]]
+      nabla_sum.w[[l]] = nabla_sum.w[[l]] + net$nabla.w[[l]]
     }
     
-    MSE = MSE + sum(nabla.x$E)
   }
-  
-  net$mbMSE = MSE
-  
-  # calculate the average gradient for the minibatch
-  # nabla_avg.w = lapply(nabla_sum.w, function(x) x/m)
-  # nabla_avg.b = lapply(nabla_sum.b, function(x) x/m)
   
   net$nabla_sum.w = nabla_sum.w
   net$nabla_sum.b = nabla_sum.b
@@ -163,14 +172,18 @@ SGD.mini.batch = function(net, mini.batch) {
 
 # feed training data forward generating a per layer list of activations and z values
 feedForward = function(net, x) {
-  activation = x # input values
-  net$activations = list(x) # list to store all the activations layer by layer
+  activation = as.matrix(x) # input values
+  net$activations = list(activation) # list to store all the activations layer by layer
   net$z = list() # list to store all the zs layer by layer, where z = wa+b
   
+  #     I1  I2         
+  # H1  w   w   dot  I1   =   H1A
+  # H2  w   w        I2       H2A
+  
   for (l in 2:net$num.layers) { # because layer 1 has no weights
-    net$z[[l]] = (net$weights[[l]] %*% activation) + net$biases[[l]]
+    net$z[[l]] = (net$weights[[l]] %*% activation) + net$biases[[l]] # biases gets converted to column vector
     activation = sigmoid(net$z[[l]])
-    net$activations[[l]] = activation
+    net$activations[[l]] = activation # activations is a column vector
   }
   
   return(net)
@@ -182,37 +195,44 @@ feedForward = function(net, x) {
 # 3) calculate nodedelta from error, sigmoidprime and for interior nodes the weights
 # 4) calculate the gradient (nabla) from the nodedeltas and activations
 backPropogate = function(net, x, y) {
-  
-  # Zero the gradient vectors using the same shape as the source 
-  nabla.b = lapply(net$biases, function(x) x*0)
-  nabla.w = lapply(net$weights, function(x) x*0)
-  
-  # delta is the error term of the gradient vector
-  delta=list()
-  
+  net$nabla.b = list()
+  net$nabla.w = list()
   L = net$num.layers
   
-  # output delta = costderivative * sigmoid derivative(z)
+  # Step 1: Calculate the Error
   # costderivative = Error = actual - expected
   E = net$activations[[L]]-y
-  delta[[L]] = -E * sigmoid.prime(net$z[[L]])
+  net$SSE = net$SSE + sum(E*E)
+  
+  # Step 2: Calculate a delta for each node
+  #   a) Calculate delta for the output nodes
+  #        Output delta = -E * f`(z)
+  #   b) Calculate delta for interior nodes using delta from the node after
+  #        Interior delta = f`(z)*sum_k(w_ki*delta_k)
+  # Output layer deltas first
+  net$delta=list()
+  net$delta[[L]] = -E * sigmoid.prime(net$z[[L]])
+  
+  # Step 3: Calculate the individual gradients (nabla)
+  # nabla = partial derivate dE/dw = delta_k * output_i
+  # nabla_h1_to_o1 = 
   
   # gradient vector for the output layer
-  nabla.b[[L]]=delta[[L]]
-  nabla.w[[L]]=delta[[L]] %*% t(net$activations[[L-1]])
+  net$nabla.b[[L]]=net$delta[[L]]
+  net$nabla.w[[L]]=net$delta[[L]] %*% t(net$activations[[L-1]]) # convert activations from column vector to row vector
   
   # now calculate gradient vectors for all prior layers except layer 1
   for (l in (L-1):2) { # stop at layer 2 as layer 1 has no weights
     
-    # recalculate deltal from prior delta (deltal+1)
-    delta[[l]] = (t(net$weights[[l+1]]) %*% delta[[l+1]]) * sigmoid.prime(net$z[[l]])
+    # recalculate delta from prior delta (deltal+1)
+    net$delta[[l]] = (t(net$weights[[l+1]]) %*% net$delta[[l+1]]) * sigmoid.prime(net$z[[l]])
     
     # calculate the gradient vector using delta
-    nabla.w[[l]] = delta[[l]] %*% t(net$activations[[l-1]])
-    nabla.b[[l]] = delta[[l]]
+    net$nabla.w[[l]] = net$delta[[l]] %*% t(net$activations[[l-1]])
+    net$nabla.b[[l]] = net$delta[[l]]
   }
   
-  return(list(w=nabla.w, b=nabla.b, E=(E*E)))
+  return(net)
 }
 
 
@@ -388,7 +408,7 @@ netInit <- function(sizes, sd.method="sqrtn") {
       weight.sd = 1.0
     matrix(rnorm(sizes[l]*sizes[l-1], sd=weight.sd),
         nrow = sizes[l],
-        ncol = sizes[l-1])
+        ncol = sizes[l-1])*0.01
   })
   
   lastGradients.w = lapply(1:num.layers, function(l) {
@@ -436,6 +456,7 @@ netInit <- function(sizes, sd.method="sqrtn") {
   # biases[[3]][1] <<-    0.7792991203673414
   
   x=list(
+    step = 0,
     sizes=sizes,
     num.layers=num.layers,
     
@@ -462,35 +483,6 @@ netInit <- function(sizes, sd.method="sqrtn") {
       netProgressFn())
 }
 
-
-
-# # H1 receiving weights
-# weights[[2]][1,1] = -0.06782947598673161
-# weights[[2]][1,2] =  0.22341077197888182
-#  biases[[2]][1] =   -0.4635107399577998
-# 
-# # H2 receiving weights
-# weights[[2]][2,1] =  0.9487814395569221
-# weights[[2]][2,2] =  0.46158711646254
-#  biases[[2]][2] =    0.09750161997450091
-# 
-# # o1 receiving weights
-# weights[[3]][1,1] = -0.22791948943117624
-# weights[[3]][1,2] =  0.581714099641357
-#  biases[[3]][1] =    0.7792991203673414
-
-# iris.scale = scale(iris[,1:4])
-# species.n = as.integer(iris$Species)
-# training=list()
-# for (i in 1:nrow(iris.scale)) {
-#   y=c(0,0,0)
-#   y[species.n[i]]=1
-#   training[[i]] = list(
-#     as.vector(iris.scale[i,1:4]),
-#     y
-#   )
-# }
-
 testnet = function() {
   training=list()
   training[[1]]=list(c(0,0),c(0))
@@ -501,21 +493,35 @@ testnet = function() {
   net=netInit(c(2,2,1))
   
   # H1 receiving weights
-  weights[[2]][1,1] = -0.06782947598673161
-  weights[[2]][1,2] =  0.22341077197888182
-   biases[[2]][1] =   -0.4635107399577998
+  net$weights[[2]][1,1] = -0.06782947598673161
+  net$weights[[2]][1,2] =  0.22341077197888182
+  net$biases[[2]][1] =   -0.4635107399577998
 
   # H2 receiving weights
-  weights[[2]][2,1] =  0.9487814395569221
-  weights[[2]][2,2] =  0.46158711646254
-   biases[[2]][2] =    0.09750161997450091
+  net$weights[[2]][2,1] =  0.9487814395569221
+  net$weights[[2]][2,2] =  0.46158711646254
+  net$biases[[2]][2] =    0.09750161997450091
 
   # o1 receiving weights
-  weights[[3]][1,1] = -0.22791948943117624
-  weights[[3]][1,2] =  0.581714099641357
-   biases[[3]][1] =    0.7792991203673414
-   
-   net=netTrain(net, training, epochs=100, epochUpdateFreq=1)
+  net$weights[[3]][1,1] = -0.22791948943117624
+  net$weights[[3]][1,2] =  0.581714099641357
+  net$biases[[3]][1] =    0.7792991203673414
+  
+  # iris.scale = scale(iris[,1:4])
+  # species.n = as.integer(iris$Species)
+  # training=list()
+  # for (i in 1:nrow(iris.scale)) {
+  #   y=c(0,0,0)
+  #   y[species.n[i]]=1
+  #   training[[i]] = list(
+  #     as.vector(iris.scale[i,1:4]),
+  #     y
+  #   )
+  # }
+  
+   # net=netTrain(net, training, epochs=100, mini.batch.n=1, epochUpdateFreq=1, randomEpoch = F)
+  net=netTrainStep(net, training)
+  return(net)
   
   # x=netInit(c(2,2,1)) %>% 
   #   netTrain(training, epochs=100, epochUpdateFreq=1)
