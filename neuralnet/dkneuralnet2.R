@@ -1,7 +1,14 @@
 # test4 = RPROP
 
+library(stringr)
+
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
+
+netlog = function(net, ...) {
+  net$log = paste0(net$log, ...)
+  return(net)
+}
 
 mergeLists <- function (base_list, overlay_list, recursive = TRUE) {
   if (length(base_list) == 0)
@@ -76,7 +83,7 @@ netTrain = function(net, training.data,
     mini.batch.n = round(mini.batch.percent/100 * n,0)
   net$MSE = numeric(epochs)
   
-  cat("Training data: Length",n,", Epochs:",epochs,"Batch Size:",mini.batch.n,"\n")
+  net=netlog(net, "Training data: Length=",n,", Epochs=",epochs,", Batch Size=",mini.batch.n,"\n")
   
   # run throught the training data multiple times (epochs) in randomized order
   for (j in 1:epochs) {
@@ -89,17 +96,23 @@ netTrain = function(net, training.data,
       if (randomEpoch) # randomise orderering of training data each epoch
         net = SGD.mini.batch(net, training.data[sample(1:n)[i:(i+mini.batch.n-1)]])
       else
-        net = SGD.mini.batch(net, training.data[i:(i+mini.batch.n-1)])
+        net=net = SGD.mini.batch(net, training.data[i:(i+mini.batch.n-1)])
     }
     
     net$MSE[j] = net$SSE/n
 
     if ((j==1) | ((j %% epochUpdateFreq)==0)) {
-      cat("Epoch ", j, " ",sep="")
+      
       # evaluate the net at the end of this epoch using test data
       if (!(is.null(test.data)))
-        cat(evaluate(test.data), "/",length(test.data))
-      cat(" MSE = ", net$MSE[j], "\n", sep="")
+        accuracy = paste0("Accuracy = ", round(evaluateNet(net, test.data)/length(test.data)*100,0), "%")
+      else
+        accuracy = ""
+      
+      net = net %>% 
+        netlog(str_pad(paste0(" Epoch ", j, " "), 13, "right")) %>%
+        netlog(str_pad(paste0("MSE = ", round(net$MSE[j],4), " "), 15, "right")) %>% 
+        netlog(accuracy, "\n")
     }
     
     if (!is.null(net$progressFn)) net$progressFn(j/epochs)
@@ -112,14 +125,18 @@ netTrainStep = function(net, training.data, test.data=NULL) {
   if (net$step==0) {
     net$MSE = numeric(500) # 500 max steps
     net$SSE = 0
-    net$step = 1
+    net = netlog(net, "Training stepwise online: length=", length(training.data), "\n")
   }
-  
-  net = SGD.mini.batch(net, training.data[net$step])
+
+  net = SGD.mini.batch(net, training.data[(net$step %% length(training.data))+1]) %>% 
+    netlog(str_pad(paste0(" Step ", net$step, " "), 9, "right")) %>%
+    netlog(str_pad(paste0("MSE = ", round(net$SSE/(net$step+1),4)), 15, "right"),"\n")
   
   net$step = net$step + 1
-  if (net$step > length(training.data)) {
-    net$step = 1
+  
+  if (net$step %% length(training.data) == 0) {
+    # a new epoch
+    net$SSE = 0
   }
   
   return(net)
@@ -359,12 +376,8 @@ getRPROPWtChanges.b = function(net, gradients, l) {
   return (net)
 }
 
-
-
-
-
 # Return the number of test inputs for which the neural network outputs the correct result
-evaluate = function(test_data) {
+evaluateNet = function(net, test_data) {
   correct = 0
   for (i in 1:length(test_data)) {
     output = solveForward(net, test_data[[i]][[1]])
@@ -435,28 +448,9 @@ netInit <- function(sizes, sd.method="sqrtn") {
     )
   })
   
-  # activations = list()
-  # z = list()
-  # updateValues = list()
-  # lastDelta = list()
-  
-  # # H1 receiving weights
-  # weights[[2]][1,1] <<- -0.06782947598673161
-  # weights[[2]][1,2] <<-  0.22341077197888182
-  # biases[[2]][1] <<-   -0.4635107399577998
-  # 
-  # # H2 receiving weights
-  # weights[[2]][2,1] <<-  0.9487814395569221
-  # weights[[2]][2,2] <<-  0.46158711646254
-  # biases[[2]][2] <<-    0.09750161997450091
-  # 
-  # # o1 receiving weights
-  # weights[[3]][1,1] <<- -0.22791948943117624
-  # weights[[3]][1,2]<<-  0.581714099641357
-  # biases[[3]][1] <<-    0.7792991203673414
-  
   x=list(
     step = 0,
+    log="",
     sizes=sizes,
     num.layers=num.layers,
     
@@ -477,6 +471,8 @@ netInit <- function(sizes, sd.method="sqrtn") {
     updateValues = list(),
     lastDelta = list()
   )
+  
+  x=netlog(x, "Net initiated: Layers=", num.layers, ", Sizes=", paste(sizes,collapse=","),"\n")
   
   return(x %>% 
       netRPROPGradientDescent() %>% 

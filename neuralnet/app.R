@@ -114,7 +114,11 @@ server <- function(session, input, output) {
     
     net = initNetwork() %>% 
       netProgressFn(function(x) progress$set(x)) %>% 
-      netTrain(getTrainingData(), epochs=input$nEpochs, mini.batch.percent=input$nBatchSize, randomEpoch=input$bRandomEpoch)
+      netTrain(getTrainingData(), 
+        epochs=input$nEpochs,
+        mini.batch.percent=input$nBatchSize,
+        randomEpoch=input$bRandomEpoch,
+        test.data=getTrainingData())
     
     rValues$run.n = rValues$run.n + 1
     rValues$rnet = net
@@ -140,8 +144,8 @@ server <- function(session, input, output) {
     rValues$rnet = list()
   })
   
-  output$consoleOutput = renderPrint({
-    net = rValues$rnet
+  output$consoleOutput = renderText({
+    rValues$rnet$log
   })
   
  output$distPlot <- renderPlot({
@@ -196,9 +200,9 @@ server <- function(session, input, output) {
        
    if (l > 1)
      nodes = rbind(nodes, data.frame(
-       id = paste0("L",l,"B"),
+       id = paste0("L",l-1,"B"),
        label = paste0("B",l),
-       level=l,
+       level=l-0.5,
        shape="circle",
        value = 1,
        title = 1
@@ -235,7 +239,7 @@ server <- function(session, input, output) {
          else if (input$rbVisEdges == "lastWtChanges.w")
            value = net$lastWtChanges.b[[l]][n]
          edges = rbind(edges, data.frame(
-           from = paste0("L",l,"B"),
+           from = paste0("L",l-1,"B"),
            to = paste0("L",l,"N",n),
            label=round(value,3),
            value=value,
@@ -247,7 +251,7 @@ server <- function(session, input, output) {
    }
    
    visNetwork(nodes, edges) %>% 
-     visHierarchicalLayout(direction = "LR") %>% 
+     visHierarchicalLayout(direction = "LR") %>%
      visEdges(scaling=list(max=5, label=list(enabled=F))) %>%  #TODO: customs scaling function for negative values
      visNodes(scaling=list(max=5)) %>% 
      visInteraction(hover = TRUE)
