@@ -22,7 +22,7 @@ ui <- fluidPage(
    sidebarLayout(
      
      sidebarPanel(
-       radioButtons("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
+       selectInput("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
        numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
        checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=F),
        numericInput("nBatchSize", "Batch Size %:", 100, min=0, max=100),
@@ -41,13 +41,21 @@ ui <- fluidPage(
       # Show a plot of the generated distribution
       mainPanel(
         tabsetPanel(
+          tabPanel("Info",
+            withMathJax(includeHTML("math.html"))),
           tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
-          tabPanel("Plot", plotOutput("distPlot")),
-          tabPanel("Network",
-            radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","nabla.w", "lastWtChanges.w")),
-            radioButtons("rbVisNodes","Nodes:", c("z","activations","delta")),
-            visNetworkOutput("network"))
-        )
+          tabPanel("Plot", plotOutput("distPlot"), style="margin-top:20px"),
+          tabPanel("Network", 
+            fluidRow(
+              column(6,
+                radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","nabla.w", "lastWtChanges.w"))
+              ),
+              column(6,
+                radioButtons("rbVisNodes","Nodes:", c("z","activations","delta"))
+              )
+            ),
+            visNetworkOutput("network"),  style="margin-top:20px"),
+        id="maintabs")
       )
    )
 )
@@ -122,6 +130,9 @@ server <- function(session, input, output) {
     
     rValues$run.n = rValues$run.n + 1
     rValues$rnet = net
+    
+    updateTabsetPanel(session, "maintabs", "Plot")
+    
   })
   
   observeEvent(input$go1, {
@@ -150,6 +161,7 @@ server <- function(session, input, output) {
   
  output$distPlot <- renderPlot({
    net = rValues$rnet
+   
    isolate({
      rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
      rValues$MSE.df %>%
@@ -202,7 +214,7 @@ server <- function(session, input, output) {
      nodes = rbind(nodes, data.frame(
        id = paste0("L",l-1,"B"),
        label = paste0("B",l),
-       level=l-0.5,
+       level=l,
        shape="circle",
        value = 1,
        title = 1

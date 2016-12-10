@@ -26,7 +26,9 @@ $$\sigma = f(x)=\frac{1}{1+e^{-x}}\label{sigma}$$
 
 ```{r}
 x =(-100:100)/10
-plot(x, 1/(1+exp(-x)))
+data.frame(x=x, y=1/(1+exp(-x))) %>% 
+  ggplot(aes(x=x,y=y)) +
+  geom_line()
 ```
 
 

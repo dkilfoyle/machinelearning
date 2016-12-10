@@ -128,7 +128,9 @@ netTrainStep = function(net, training.data, test.data=NULL) {
     net = netlog(net, "Training stepwise online: length=", length(training.data), "\n")
   }
 
-  net = SGD.mini.batch(net, training.data[(net$step %% length(training.data))+1]) %>% 
+  net = SGD.mini.batch(net, training.data[(net$step %% length(training.data))+1])
+  
+  net = net %>% 
     netlog(str_pad(paste0(" Step ", net$step, " "), 9, "right")) %>%
     netlog(str_pad(paste0("MSE = ", round(net$SSE/(net$step+1),4)), 15, "right"),"\n")
   
@@ -194,8 +196,8 @@ feedForward = function(net, x) {
   net$z = list() # list to store all the zs layer by layer, where z = wa+b
   
   #     I1  I2         
-  # H1  w   w   dot  I1   =   H1A
-  # H2  w   w        I2       H2A
+  # H1  w   w   dot  I1   =   H1z
+  # H2  w   w        I2       H2z
   
   for (l in 2:net$num.layers) { # because layer 1 has no weights
     net$z[[l]] = (net$weights[[l]] %*% activation) + net$biases[[l]] # biases gets converted to column vector
