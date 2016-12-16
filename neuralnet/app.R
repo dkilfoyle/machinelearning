@@ -15,49 +15,51 @@ ui <- fluidPage(
     "#consoleOutput { font-size: 11pt; height: 400px; overflow: auto; }"
   ))),
    
-   # Application title
-   titlePanel("NeuralNet"),
+  # Application title
+  titlePanel("NeuralNet"),
    
-   # Sidebar with a slider input for number of bins 
-   sidebarLayout(
+  # Sidebar with a slider input for number of bins 
+  sidebarLayout(
      
-     sidebarPanel(
-       selectInput("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
-       numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
-       checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=F),
-       numericInput("nBatchSize", "Batch Size %:", 100, min=0, max=100),
-       numericInput("nHidden1","Layer2 Hidden Neurons:", 2, min=0, max=100),
-       numericInput("nHidden2","Layer3 Hidden Neurons:", 0, min=0, max=100),       
-       radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)"),selected="sd=1.0"),
-       selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="Standard"),
-       sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
-       sliderInput("nMomentum","Momentum:", 0.3, min=0, max=1, step=0.1),
-       textInput("txtRun","Run Name:", "Run_1"),
-       actionButton("btnClearRuns","Clear Runs"),
-       actionButton("go1","Step 1"),
-       actionButton("go","Go!")
-     ),
+    sidebarPanel(
+      selectInput("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
+      numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
+      radioButtons("rbBatchMethod", "Batch Method:", c("Online","Batch")),
+      conditionalPanel(condition="input.rbBatchMethod=='Batch'",
+        checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=F),
+        numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100)),
+      numericInput("nHidden1","Layer2 Hidden Neurons:", 2, min=0, max=100),
+      numericInput("nHidden2","Layer3 Hidden Neurons:", 0, min=0, max=100),       
+      radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)","nguyen.widrow", "aifh.xor"),selected="sd=1.0"),
+      selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="Standard"),
+      sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
+      sliderInput("nMomentum","Momentum:", 0.3, min=0, max=1, step=0.1),
+      textInput("txtRun","Run Name:", "Run_1"),
+      actionButton("btnClearRuns","Clear Runs"),
+      actionButton("go1","Step 1"),
+      actionButton("go","Go!")
+    ),
       
-      # Show a plot of the generated distribution
-      mainPanel(
-        tabsetPanel(
-          tabPanel("Info",
-            withMathJax(includeHTML("math.html"))),
-          tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
-          tabPanel("Plot", plotOutput("distPlot"), style="margin-top:20px"),
-          tabPanel("Network", 
-            fluidRow(
-              column(6,
-                radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","nabla.w", "lastWtChanges.w"))
-              ),
-              column(6,
-                radioButtons("rbVisNodes","Nodes:", c("z","activations","delta"))
-              )
+    # Show a plot of the generated distribution
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Info",
+          withMathJax(includeHTML("math.html"))),
+        tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
+        tabPanel("Plot", plotOutput("distPlot"), style="margin-top:20px"),
+        tabPanel("Network", 
+          fluidRow(
+            column(6,
+              radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","gradient.w", "gradient_sum.w", "lastWtChanges.w"))
             ),
-            visNetworkOutput("network"),  style="margin-top:20px"),
-        id="maintabs")
-      )
-   )
+            column(6,
+              radioButtons("rbVisNodes","Nodes:", c("z","activations","delta"))
+            )
+          ),
+          visNetworkOutput("network"),  style="margin-top:20px"),
+      id="maintabs")
+    )
+  )
 )
 
 server <- function(session, input, output) {
@@ -96,21 +98,23 @@ server <- function(session, input, output) {
     
     # initial weights to mimic example http://www.heatonresearch.com/aifh/vol3/xor_online.html
     
-    # H1 receiving weights
-    net$weights[[2]][1,1] = -0.06782947598673161
-    net$weights[[2]][1,2] =  0.22341077197888182
-    net$biases[[2]][1] = -0.4635107399577998
-    
-    # H2 receiving weights
-    net$weights[[2]][2,1] =  0.9487814395569221
-    net$weights[[2]][2,2] =  0.46158711646254
-    net$biases[[2]][2] =    0.09750161997450091
-    
-    # o1 receiving weights
-    net$weights[[3]][1,1] = -0.22791948943117624
-    net$weights[[3]][1,2] =  0.581714099641357
-    net$biases[[3]][1] =    0.7792991203673414
-    
+    if (input$rbWeightSD == "aifh.xor") {
+      # H1 receiving weights
+      net$weights[[2]][1,1] = -0.06782947598673161
+      net$weights[[2]][1,2] =  0.22341077197888182
+      net$biases[[2]][1] = -0.4635107399577998
+      
+      # H2 receiving weights
+      net$weights[[2]][2,1] =  0.9487814395569221
+      net$weights[[2]][2,2] =  0.46158711646254
+      net$biases[[2]][2] =    0.09750161997450091
+      
+      # o1 receiving weights
+      net$weights[[3]][1,1] = -0.22791948943117624
+      net$weights[[3]][1,2] =  0.581714099641357
+      net$biases[[3]][1] =    0.7792991203673414
+    }
+
     return(net)
   }
   
@@ -140,9 +144,12 @@ server <- function(session, input, output) {
       net = initNetwork()
     else
       net = rValues$rnet
-    net = netTrainStep(net, getTrainingData())
+    
+    net = netTrainStep(net, getTrainingData(), input$rbBatchMethod)
     
     rValues$rnet = net
+    
+    updateTabsetPanel(session, "maintabs", "Console")
   })
   
   observeEvent(rValues$run.n, {
@@ -246,8 +253,12 @@ server <- function(session, input, output) {
        if (l > 1) {
          if (input$rbVisEdges == "weights")
            value = net$biases[[l]][n]
-         else if (input$rbVisEdges == "nabla.w")
-           value = net$nabla.b[[l]][n]
+         else if (input$rbVisEdges == "updateValues.w")
+           value = net$updateValues.b[[l]][n]
+         else if (input$rbVisEdges == "gradient.w")
+           value = net$gradient.b[[l]][n]
+         else if (input$rbVisEdges == "gradient_sum.w")
+           value = net$gradient_sum.b[[l]][n]
          else if (input$rbVisEdges == "lastWtChanges.w")
            value = net$lastWtChanges.b[[l]][n]
          edges = rbind(edges, data.frame(
