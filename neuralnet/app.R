@@ -132,7 +132,8 @@ server <- function(session, input, output) {
         maxerror=input$nMaxError,
         mini.batch.percent=input$nBatchSize,
         randomEpoch=input$bRandomEpoch,
-        test.data=getTrainingData())
+        test.data=getTrainingData(),
+        runName=input$txtRun)
     
     rValues$run.n = rValues$run.n + 1
     rValues$rnet = net
@@ -173,12 +174,12 @@ server <- function(session, input, output) {
    
    isolate({
      # rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
-     rValues$MSE.df = data.frame(epoch=1:length(net$MSE), MSE=net$MSE, run=input$txtRun)
+     rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:length(net$MSE), MSE=net$MSE, run=net$runName))
      
      rValues$MSE.df %>%
        ggplot(aes(x=epoch, y=MSE, colour=run)) +
         geom_line() +
-        ylim(0,1)
+        ylim(0,0.5)
    })
 
    # 

@@ -52,14 +52,16 @@ netProgressFn = function(net, fn=NULL) {
 netTrain = function(net, training.data, 
   maxepochs=500, maxerror=0.01, mini.batch.percent=10,
   epochUpdateFreq=10, randomEpoch=T,
-  test.data=NULL) {
+  test.data=NULL, runName="trainRun") {
+  
+  net$runName = runName
   
   n = length(training.data)
   if (mini.batch.percent==0)
     mini.batch.n = 1 # ie on-line training
   else
     mini.batch.n = round(mini.batch.percent/100 * n,0)
-  net$MSE = numeric(maxepochs)
+  net$MSE = c() #numeric(maxepochs)
   
   net=netlog(net, "Training data: Length=",n,", Epochs=",maxepochs,", Batch Size=",mini.batch.n,"\n")
   
