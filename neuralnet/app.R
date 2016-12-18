@@ -23,14 +23,15 @@ ui <- fluidPage(
      
     sidebarPanel(
       selectInput("rbDataset", "Dataset:", c("XOR","Titanic","Iris")),
-      numericInput("nEpochs", "Epochs:", 500, min=1, max=10000, step=100),
+      numericInput("nEpochs", "Max Epochs:", 500, min=1, max=10000, step=100),
+      numericInput("nMaxError","Max Error:", 0.01, min=0.0, step=0.01),
       radioButtons("rbBatchMethod", "Batch Method:", c("Online","Batch")),
       conditionalPanel(condition="input.rbBatchMethod=='Batch'",
         checkboxInput("bRandomEpoch","Randomize order each epoch: ", value=F),
         numericInput("nBatchSize", "Batch Size %:", 100, min=1, max=100)),
       numericInput("nHidden1","Layer2 Hidden Neurons:", 2, min=0, max=100),
       numericInput("nHidden2","Layer3 Hidden Neurons:", 0, min=0, max=100),       
-      radioButtons("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)","nguyen.widrow", "aifh.xor"),selected="sd=1.0"),
+      selectInput("rbWeightSD", "Weight Initiation SD:", c("sd=1.0","sd=1/sqrt(n)","nguyen.widrow", "aifh.xor"),selected="sd=1.0"),
       selectInput("sMethod","Back Propogation Method:",c("Standard","RPROP"), selected="Standard"),
       sliderInput("nTraining","Training Rate:", 0.7, min=0, max=1, step=0.1),
       sliderInput("nMomentum","Momentum:", 0.3, min=0, max=1, step=0.1),
@@ -127,7 +128,8 @@ server <- function(session, input, output) {
     net = initNetwork() %>% 
       netProgressFn(function(x) progress$set(x)) %>% 
       netTrain(getTrainingData(), 
-        epochs=input$nEpochs,
+        maxepochs=input$nEpochs,
+        maxerror=input$nMaxError,
         mini.batch.percent=input$nBatchSize,
         randomEpoch=input$bRandomEpoch,
         test.data=getTrainingData())
@@ -170,7 +172,9 @@ server <- function(session, input, output) {
    net = rValues$rnet
    
    isolate({
-     rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
+     # rValues$MSE.df = rbind(rValues$MSE.df, data.frame(epoch=1:input$nEpochs, MSE=net$MSE, run=input$txtRun))
+     rValues$MSE.df = data.frame(epoch=1:length(net$MSE), MSE=net$MSE, run=input$txtRun)
+     
      rValues$MSE.df %>%
        ggplot(aes(x=epoch, y=MSE, colour=run)) +
         geom_line() +

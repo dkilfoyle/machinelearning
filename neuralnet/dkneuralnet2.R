@@ -50,7 +50,7 @@ netProgressFn = function(net, fn=NULL) {
 # For each run process training data in batches of mini.batch.size
 # only update the weights once per mini.batch using the batches average gradient vector
 netTrain = function(net, training.data, 
-  epochs=500, mini.batch.percent=10,
+  maxepochs=500, maxerror=0.01, mini.batch.percent=10,
   epochUpdateFreq=10, randomEpoch=T,
   test.data=NULL) {
   
@@ -59,12 +59,12 @@ netTrain = function(net, training.data,
     mini.batch.n = 1 # ie on-line training
   else
     mini.batch.n = round(mini.batch.percent/100 * n,0)
-  net$MSE = numeric(epochs)
+  net$MSE = numeric(maxepochs)
   
-  net=netlog(net, "Training data: Length=",n,", Epochs=",epochs,", Batch Size=",mini.batch.n,"\n")
+  net=netlog(net, "Training data: Length=",n,", Epochs=",maxepochs,", Batch Size=",mini.batch.n,"\n")
   
   # run throught the training data multiple times (epochs) in randomized order
-  for (j in 1:epochs) {
+  for (j in 1:maxepochs) {
     net$SSE = 0.0 # Squared Error for averaging
     
     # process training data in batches of mini.batch.size
@@ -93,7 +93,10 @@ netTrain = function(net, training.data,
         netlog(accuracy, "\n")
     }
     
-    if (!is.null(net$progressFn)) net$progressFn(j/epochs)
+    if (!is.null(net$progressFn)) net$progressFn(j/maxepochs)
+    
+    if (net$SSE < maxerror)
+      break
   }
   
   return(net)
@@ -382,7 +385,7 @@ netInit <- function(sizes, sd.method="sqrtn") {
   # generate a vector for each layer containing biases for each neuron. \
   # layer 1 doesnt need a bias
   if (sd.method=="nguyen.widrow") {
-    biases = lapply(sizes, function(x) runif(x)-1) # range -0.5..0.5
+    biases = lapply(sizes, function(x) runif(x)-0.5) # range -0.5..0.5
   }
   else
     biases = lapply(sizes, rnorm)
@@ -416,7 +419,7 @@ netInit <- function(sizes, sd.method="sqrtn") {
     
     if (sd.method=="nguyen.widrow") {
       # init weights to range -0.5..0.5
-      return(matrix(runif(sizes[2]*sizes[1])-1,
+      return(matrix(runif(sizes[2]*sizes[1])-0.5,
         nrow = sizes[l], ncol=sizes[l-1]))
     }
     else {
@@ -427,11 +430,23 @@ netInit <- function(sizes, sd.method="sqrtn") {
   })
   
   if (sd.method=="nguyen.widrow") {
+    
+    # debug
+    # H1 receiving weights
+    weights[[2]][1,1] = 0.5172524211645029
+    weights[[2]][1,2] =  -0.5258712726818855
+    biases[[2]][1] =   0.8891383322123643
+
+    # H2 receiving weights
+    weights[[2]][2,1] =  -0.007687742622070948
+    weights[[2]][2,2] =  -0.48985643968339754
+    biases[[2]][2] =    -0.6610227585583137
+    
     # first hidden layer only 
     beta = 0.7 * sizes[2]^(1/sizes[1])
     for (i in 1:sizes[2]) {
       # for each receiving neuron m_rs
-      euclid.norm = sqrt(sum(weights[[2]][i,]*weights[[2]][i,])+(biases[[l]][i])^2)
+      euclid.norm = sqrt(sum(weights[[2]][i,]*weights[[2]][i,])+(biases[[2]][i])^2)
       weights[[2]][i,] = beta*weights[[2]][i,]/euclid.norm
       biases[[2]][i] = beta*biases[[2]][i]/euclid.norm
     }
@@ -499,7 +514,7 @@ testnet = function() {
   training[[3]]=list(c(0,1),c(1))
   training[[4]]=list(c(1,1),c(0))
   
-  net=netInit(c(2,2,1))
+  net=netInit(c(2,2,1), sd.method="nguyen.widrow")
   
   # # H1 receiving weights
   # net$weights[[2]][1,1] = -0.06782947598673161
