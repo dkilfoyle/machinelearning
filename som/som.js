@@ -89,8 +89,7 @@ $(document).ready(function(){
         var deltaCol = bmuCol - locationCol;
         deltaRow = deltaRow * deltaRow;
         deltaCol = deltaCol * deltaCol;
-        var sum = (deltaRow/(2.0*rbfWidth*rbfWidth)) + 
-          (deltaCol/(2.0*rbfWidth*rbfWidth));
+        var sum = (deltaRow/(2.0*rbfWidth*rbfWidth)) + (deltaCol/(2.0*rbfWidth*rbfWidth));
         var neighbor = Math.exp(-sum);
         //window.alert(row + " " + locationRow + " " + locationCol);
         var d = sample[col]-weights[row][col]; 

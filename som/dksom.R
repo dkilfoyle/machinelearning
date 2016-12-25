@@ -27,7 +27,6 @@ somTrain = function(som, trainingData, runName="test") {
   while (som$iteration <= som$maxIterations) {
     som = som %>% 
       somTrainStep(trainingData)
-    plotsom(som)
   }
   
   som=som %>%
@@ -55,27 +54,21 @@ somLearn = function(som, x) {
   bmu = findBMU(som, x)
   bmuRow = ceiling(bmu$index/som$gridWidth)
   bmuCol = bmu$index - ((bmuRow-1) * som$gridWidth)
+  w22 = 2.0*som$rbfWidth*som$rbfWidth
   
-  for(wtindex in 1:nrow(som$weights)) {
-      locationRow = ceiling(wtindex/som$gridWidth)
-      locationCol = wtindex - ((locationRow-1) * som$gridWidth)
-      
-      deltaRow = bmuRow - locationRow
-      deltaCol = bmuCol - locationCol
-      
-      deltaRow = deltaRow * deltaRow
-      deltaCol = deltaCol * deltaCol;
-      
-      v = (deltaRow/(2.0*som$rbfWidth*som$rbfWidth)) + (deltaCol/(2.0*som$rbfWidth*som$rbfWidth))
-      neighbor = exp(-v)
-      
-      d = x - som$weights[wtindex,]
-      som$corrections[wtindex, ] = (d * neighbor * som$learningRate)
-    
-  }
-  
+  locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
+  locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
+
+  deltaRow = (bmuRow - locationRow)^2
+  deltaCol = (bmuCol - locationCol)^2
+
+  v = (deltaRow/w22) + (deltaCol/w22)
+  neighbor = exp(-v)
+
+  d = -1*sweep(som$weights,2,x) # same as d=x-weights
+  som$corrections = (d * neighbor * som$learningRate)
+
   som$bmu = bmu
-  
   return(som)
 }
 
@@ -89,25 +82,10 @@ somCorrect = function(som) {
 
 # return the index of the Best Matching Unit
 # this is the neuron with the closest euclidean distance to the input numbers
-# TODO Vectorise
 findBMU = function(som, x) {
-
-  bestIndex = -1
-  bestDistance = 0
-  worstDistance = 0
-  
-  for (i in 1:nrow(som$weights)) {
-    
-    delta = x - som$weights[i,] # subtract each column value
-    dist = sqrt(sum(delta * delta))
-    
-    if (bestIndex==-1 | dist<bestDistance) {
-      bestIndex = i
-      bestDistance = dist
-    }
-    
-  }
-  return(list(index=bestIndex, distance=bestDistance))
+  delta = sweep(som$weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
+  dist = sqrt(rowSums(delta*delta))
+  return(list(index=which.min(dist), distance=dist[which.min(dist)]))
 }
 
 somClear <- function(som) {
@@ -160,6 +138,21 @@ somSetLearningParameters <- function(som, maxIterations=100, startRate=0.8, endR
   return(som)
 }
 
+plotneighbor = function(som, z) {
+  z=as.data.frame(z)
+  z$x = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
+  z$y = rep(1:50,each=50)
+  
+  ggplot(data=z, aes(x=x, y=y, fill=rgb(z,z,z))) +
+    geom_tile() +
+    scale_fill_identity() +
+    xlab("") +
+    ylab("") +
+    xlim(1,som$gridWidth) +
+    ylim(1,som$gridHeight) +
+    coord_fixed()
+}
+
 plotsom = function(som) {
   z=as.data.frame((som$weights+1)/2.0)
   z$x = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
@@ -171,7 +164,8 @@ plotsom = function(som) {
     xlab("") +
     ylab("") +
     xlim(1,som$gridWidth) +
-    ylim(1,som$gridHeight)
+    ylim(1,som$gridHeight) +
+    coord_fixed()
 }
 
 
