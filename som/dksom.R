@@ -49,6 +49,12 @@ somTrainStep = function(som, trainingData) {
   return(som)
 }
 
+i2rc = function(index) {
+  bmuRow = ceiling(index/50)
+  bmuCol = index - ((bmuRow-1) * 50)
+  cat(bmuRow, ", ", bmuCol,"\n")
+}
+
 somLearn = function(som, x) {
   
   bmu = findBMU(som, x)
@@ -59,15 +65,16 @@ somLearn = function(som, x) {
   locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
   locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
 
-  deltaRow = (bmuRow - locationRow)^2
-  deltaCol = (bmuCol - locationCol)^2
-
+  deltaRow = (locationRow-bmuRow)^2
+  deltaCol = (locationCol-bmuCol)^2
+  
   v = (deltaRow/w22) + (deltaCol/w22)
   neighbor = exp(-v)
 
   d = -1*sweep(som$weights,2,x) # same as d=x-weights
   som$corrections = (d * neighbor * som$learningRate)
 
+  som$neighbor = neighbor
   som$bmu = bmu
   return(som)
 }
@@ -127,7 +134,7 @@ somInit <- function(inputSize, gridWidth, gridHeight) {
   return(som)
 }
 
-somSetLearningParameters <- function(som, maxIterations=100, startRate=0.8, endRate=0.003, startWidth=30, endWidth=5) {
+somSetLearningParameters <- function(som, maxIterations=1000, startRate=0.8, endRate=0.003, startWidth=30, endWidth=5) {
   som$maxIterations=maxIterations
   som$startRate = startRate
   som$endRate = endRate
@@ -138,19 +145,24 @@ somSetLearningParameters <- function(som, maxIterations=100, startRate=0.8, endR
   return(som)
 }
 
-plotneighbor = function(som, z) {
-  z=as.data.frame(z)
-  z$x = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
-  z$y = rep(1:50,each=50)
+plotneighbor = function(som) {
+  z=data.frame(z=som$neighbor)
+  z$y = ceiling(1:length(som$neighbor)/som$gridWidth)
+  z$x = 1:length(som$neighbor) - ((z$y-1) * som$gridWidth)
+  
+  bmuRow = ceiling(som$bmu$index/som$gridWidth)
+  bmuCol = som$bmu$index - ((bmuRow-1) * som$gridWidth)
   
   ggplot(data=z, aes(x=x, y=y, fill=rgb(z,z,z))) +
     geom_tile() +
     scale_fill_identity() +
     xlab("") +
     ylab("") +
-    xlim(1,som$gridWidth) +
-    ylim(1,som$gridHeight) +
-    coord_fixed()
+    xlim(0,som$gridWidth+1) +
+    ylim(0,som$gridHeight+1) +
+    coord_fixed() +
+    geom_tile(aes(x=bmuCol, y=bmuRow), fill=rgb(1,0,0))
+
 }
 
 plotsom = function(som) {
@@ -158,13 +170,13 @@ plotsom = function(som) {
   z$x = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
   z$y = rep(1:50,each=50)
   
-  ggplot(data=z, aes(x=x, y=y, fill=rgb(V1,V2,V3))) +
+  ggplot(data=z, aes(x=y, y=x, fill=rgb(V1,V2,V3))) +
     geom_tile() +
     scale_fill_identity() +
     xlab("") +
     ylab("") +
-    xlim(1,som$gridWidth) +
-    ylim(1,som$gridHeight) +
+    xlim(0,som$gridWidth+1) +
+    ylim(0,som$gridHeight+1) +
     coord_fixed()
 }
 
@@ -179,7 +191,4 @@ testsom = function() {
 
   return(som)
 }
-
-
-
 

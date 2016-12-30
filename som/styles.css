@@ -1,0 +1,39 @@
+.timelinevis {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.rhandsontable {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.panel-body {
+  background-color: rgb(245,245,245);
+}
+
+.panel-default>.panel-heading {
+  background-color: rgb(230,230,230);
+}
+
+.panel-heading a:after {
+  font-family: 'Glyphicons Halflings';
+  content: "\e114";
+  float: right;
+  color: grey;
+}
+.panel-heading a.collapsed:after {
+  content: "\e080";    /* adjust as needed, taken from bootstrap.css */
+}
+
+.panel-heading a:focus {
+  outline: 0;
+}
+
+.header-panel {
+  margin-bottom: 19px !important;
+}
+
+.top-gap {
+  margin-top: 19px;
+}
