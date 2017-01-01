@@ -2,6 +2,7 @@
 
 library(stringr)
 library(ggplot2)
+library(scales)
 
 sigmoid = function(z) return(1.0/(1.0+exp(-z)))
 sigmoid.prime = function(z) return(sigmoid(z)*(1-sigmoid(z)))
@@ -36,17 +37,15 @@ somTrain = function(som, trainingData, runName="test") {
 }
   
 somTrainStep = function(som, trainingData) {
-
-  som$iteration= som$iteration+1
   x=trainingData[sample(1:nrow(trainingData), size=1),] # choose 1 training sample randomly from samples
-  som$worst = 0
   
   som = som %>%
     somLearn(x) %>% 
     somCorrect() %>% 
-    somLog("Iteration: ", som$iteration, ", BMU distance: ", som$bmu$distance,"\n")
-  
-  return(som)
+    somEvaluate(trainingData) %>% 
+    somNext()
+
+    return(som)
 }
 
 i2rc = function(index) {
@@ -91,8 +90,36 @@ somCorrect = function(som) {
 # this is the neuron with the closest euclidean distance to the input numbers
 findBMU = function(som, x) {
   delta = sweep(som$weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
-  dist = sqrt(rowSums(delta*delta))
-  return(list(index=which.min(dist), distance=dist[which.min(dist)]))
+  distances = sqrt(rowSums(delta*delta))
+  minDistIndex = which.min(distances)
+  return(list(index=minDistIndex, distance=distances[minDistIndex]))
+}
+
+getBMUDistance = function(x, weights) {
+  delta = sweep(weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
+  distances=sqrt(rowSums(delta*delta))
+  return(distances[which.min(distances)])
+}
+
+getBMUIndex = function(x, weights) {
+  delta = sweep(weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
+  distances=sqrt(rowSums(delta*delta))
+  return(which.min(distances))
+}
+
+somEvaluate = function(som, trainingData) {
+  if (som$iteration %% som$evaluateEveryN == 0) {
+    bmus = apply(trainingData, 1, getBMUDistance, som$weights)
+    som$meanBMUDistance = c(som$meanBMUDistance, mean(bmus))
+    som = som %>% 
+      somLog("Iteration: ", som$iteration, ", Mean Distance = ", round(mean(bmus),3),"\n")
+  }
+  return(som)
+}
+
+somNext = function(som) {
+  som$iteration = som$iteration+1
+  return(som)
 }
 
 somClear <- function(som) {
@@ -111,18 +138,20 @@ somClear <- function(som) {
   som$learningRate = som$startRate
   som$rbfWidth = som$startWidth
   som$iteration = 0
+  som$meanBMUDistance = c()
   
   return(som)
 }
 
-somInit <- function(inputSize, gridWidth, gridHeight) {
+somInit <- function(inputSize, gridWidth, gridHeight, evaluateEveryN=10) {
    # set.seed(12345)
   
   x=list(inputSize=inputSize,
       gridWidth=gridWidth,
       gridHeight=gridHeight,
       log="",
-      echo=T
+      echo=T,
+      evaluateEveryN=evaluateEveryN
     )
   
   som=x %>% 
@@ -167,10 +196,10 @@ plotneighbor = function(som) {
 
 plotsom = function(som) {
   z=as.data.frame((som$weights+1)/2.0)
-  z$x = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
-  z$y = rep(1:50,each=50)
+  z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
+  z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
   
-  ggplot(data=z, aes(x=y, y=x, fill=rgb(V1,V2,V3))) +
+  ggplot(data=z, aes(x=nodesCol, y=nodesRow, fill=rgb(V1,V2,V3))) +
     geom_tile() +
     scale_fill_identity() +
     xlab("") +
@@ -180,6 +209,28 @@ plotsom = function(som) {
     coord_fixed()
 }
 
+plotMeanBMU = function(som) {
+  data.frame(iteration=1:length(som$meanBMUDistance)*10, distance=som$meanBMUDistance) %>% 
+    ggplot(aes(x=iteration, y=distance)) +
+    geom_line()
+}
+
+plotNodeCount = function(som, trainingData) {
+  bmus = apply(trainingData, 1, getBMUIndex, som$weights)
+  counts = numeric(som$gridWidth*som$gridHeight)
+  for (i in 1:length(bmus)) {
+    counts[bmus[i]] = counts[bmus[i]]+1
+  }
+  
+  z=data.frame(counts=rescale(counts))
+  z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
+  z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
+  
+  z %>% 
+    ggplot(aes(x=nodesCol, y=nodesRow)) +
+      geom_tile(aes(fill=counts)) +
+      scale_fill_gradient()
+}
 
 testsom = function() {
   samples=matrix(runif(15*3, min=-1.0, max=1.0),

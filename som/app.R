@@ -26,7 +26,7 @@ ui <- fluidPage(
     sidebarPanel(
       includeCSS("styles.css"),
       
-      selectInput("rbDataset", "Dataset:", c("Colors","Titanic","Iris")),
+      selectInput("sDataset", "Dataset:", c("Colors","Dublin")),
       numericInput("nMaxIterations", "Max Iterations:", 500, min=1, max=10000, step=100),
       
       bsCollapse(id="Options",
@@ -71,9 +71,17 @@ ui <- fluidPage(
 server <- function(session, input, output) {
   
   getTrainingData = reactive({
-    matrix(runif(15*3, min=-1.0, max=1.0),
-      nrow=15,
-      ncol=3)
+    isolate({
+      if (input$sDataset == "Colors") {
+        mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
+                           nrow=15,
+                           ncol=3)
+      }
+      if (input$sDataset=="Dublin") {
+        mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+      }
+    })
+    return(mydata)
   })
   
   getSom = reactive({
@@ -118,9 +126,10 @@ server <- function(session, input, output) {
   })
   
   observeEvent(input$btnClearRuns, {
+    updateTabsetPanel(session, "maintabs", "Console")
     rValues$MSE.df = data.frame(epoch=c(), MSE=c())
     rValues$run.n=1
-    rValues$rsom = list()
+    rValues$rsom = NULL
   })
   
   output$consoleOutput = renderText({
@@ -129,7 +138,7 @@ server <- function(session, input, output) {
   
  output$distPlot <- renderPlot({
    som = rValues$rsom
-   multiplot(plotsom(som), plotneighbor(som), cols=2)
+   multiplot(plotMeanBMU(som), plotNodeCount(som, getTrainingData()), plotsom(som), plotneighbor(som), cols=2)
  })
  
  output$network = renderVisNetwork({
