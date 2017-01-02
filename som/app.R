@@ -16,7 +16,7 @@ ui <- fluidPage(
   shiny::tags$head(shiny::tags$style(shiny::HTML(
     "#consoleOutput { font-size: 11pt; height: 400px; overflow: auto; }"
   ))),
-   
+  
   # Application title
   titlePanel("Self Organizing Map"),
    
@@ -52,17 +52,12 @@ ui <- fluidPage(
         tabPanel("Info",
           withMathJax(includeHTML("math.html"))),
         tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
-        tabPanel("Plot", plotOutput("distPlot"), style="margin-top:20px"),
-        tabPanel("Network", 
+        tabPanel("Plot", 
           fluidRow(
-            column(6,
-              radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","gradient.w", "gradient_sum.w", "lastWtChanges.w"))
-            ),
-            column(6,
-              radioButtons("rbVisNodes","Nodes:", c("z","activations","delta"))
-            )
-          ),
-          visNetworkOutput("network"),  style="margin-top:20px"),
+            column(6, selectInput("sFeature","Feature:", c("RGB","R","G","B"))),
+            column(6, numericInput("nNumClusters","Number of Clusters", 5)),
+            column(12, 
+              plotOutput("distPlot"), style="margin-top:20px"))),
       id="maintabs")
     )
   )
@@ -76,6 +71,7 @@ server <- function(session, input, output) {
         mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
                            nrow=15,
                            ncol=3)
+        dimnames(mydata) = list(NULL, c("R","G","B"))
       }
       if (input$sDataset=="Dublin") {
         mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
@@ -138,7 +134,10 @@ server <- function(session, input, output) {
   
  output$distPlot <- renderPlot({
    som = rValues$rsom
-   multiplot(plotMeanBMU(som), plotNodeCount(som, getTrainingData()), plotsom(som), plotneighbor(som), cols=2)
+   multiplot(plotMeanBMU(som), 
+             plotNodeCount(som, getTrainingData()),
+             plotSOMFeature(som,input$sFeature),
+             plotClusters(som, input$nNumClusters), cols=2)
  })
  
  output$network = renderVisNetwork({

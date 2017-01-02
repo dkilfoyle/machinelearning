@@ -24,6 +24,7 @@ somTrain = function(som, trainingData, runName="test") {
   
   som$runName = runName
   som=somLog(som, "Samples: Length=", som$inputSize, "\n")
+  dimnames(som$weights) = list(NULL, colnames(trainingData))
   
   while (som$iteration <= som$maxIterations) {
     som = som %>% 
@@ -174,7 +175,7 @@ somSetLearningParameters <- function(som, maxIterations=1000, startRate=0.8, end
   return(som)
 }
 
-plotneighbor = function(som) {
+plotNeighbor = function(som) {
   z=data.frame(z=som$neighbor)
   z$y = ceiling(1:length(som$neighbor)/som$gridWidth)
   z$x = 1:length(som$neighbor) - ((z$y-1) * som$gridWidth)
@@ -194,14 +195,36 @@ plotneighbor = function(som) {
 
 }
 
-plotsom = function(som) {
+plotSOMFeature = function(som, feature) {
   z=as.data.frame((som$weights+1)/2.0)
   z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
   z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
   
-  ggplot(data=z, aes(x=nodesCol, y=nodesRow, fill=rgb(V1,V2,V3))) +
-    geom_tile() +
-    scale_fill_identity() +
+  if (feature=="RGB") {
+    p = ggplot(data=z, aes(x=nodesCol, y=nodesRow, fill=rgb(R,G,B))) +
+      scale_fill_identity()
+  }
+  else
+    p = ggplot(data=z, aes_string(x="nodesCol", y="nodesRow", fill=feature))
+  
+  p +
+    geom_tile(show.legend=F) +
+    xlab("") +
+    ylab("") +
+    xlim(0,som$gridWidth+1) +
+    ylim(0,som$gridHeight+1) +
+    coord_fixed()
+}
+
+plotClusters = function(som, nClusters=4) {
+  z = kmeans(som$weights, nClusters)
+  z=data.frame(cluster=z$cluster)
+  z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
+  z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
+  
+  z %>% 
+    ggplot(aes(x=nodesCol, y=nodesRow)) +
+    geom_tile(aes(fill=cluster), show.legend=F) +
     xlab("") +
     ylab("") +
     xlim(0,som$gridWidth+1) +
@@ -228,14 +251,20 @@ plotNodeCount = function(som, trainingData) {
   
   z %>% 
     ggplot(aes(x=nodesCol, y=nodesRow)) +
-      geom_tile(aes(fill=counts)) +
-      scale_fill_gradient()
+      geom_tile(aes(fill=counts), show.legend=F) +
+      scale_fill_gradient() +
+      xlab("") +
+      ylab("") +
+      xlim(0,som$gridWidth+1) +
+      ylim(0,som$gridHeight+1) +
+      coord_fixed()
 }
 
 testsom = function() {
   samples=matrix(runif(15*3, min=-1.0, max=1.0),
     nrow=15,
     ncol=3)
+  dimnames(samples) = list(NULL, c("R","G","B"))
   
   som=somInit(inputSize=3, gridWidth=50, gridHeight=50) %>% 
     somTrain(samples)
