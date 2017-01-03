@@ -27,8 +27,12 @@ somTrain = function(som, trainingData, runName="test") {
   dimnames(som$weights) = list(NULL, colnames(trainingData))
   
   while (som$iteration <= som$maxIterations) {
+    x=trainingData[sample(1:nrow(trainingData), size=1),] # choose 1 training sample randomly from samples
     som = som %>% 
-      somTrainStep(trainingData)
+      somLearn(x) %>% 
+      somCorrect() %>% 
+      somEvaluate(trainingData) %>% 
+      somNext()
   }
   
   som=som %>%
@@ -39,6 +43,7 @@ somTrain = function(som, trainingData, runName="test") {
   
 somTrainStep = function(som, trainingData) {
   x=trainingData[sample(1:nrow(trainingData), size=1),] # choose 1 training sample randomly from samples
+  dimnames(som$weights) = list(NULL, colnames(trainingData))
   
   som = som %>%
     somLearn(x) %>% 
@@ -109,8 +114,8 @@ getBMUIndex = function(x, weights) {
 }
 
 somEvaluate = function(som, trainingData) {
-  if (som$iteration %% som$evaluateEveryN == 0) {
-    bmus = apply(trainingData, 1, getBMUDistance, som$weights)
+  if (som$iteration %% som$evaluateFrequency == 0) {
+    bmus = apply(trainingData[sample(1:nrow(trainingData), size=som$evaluateSampleSize/100*nrow(trainingData)),], 1, getBMUDistance, som$weights)
     som$meanBMUDistance = c(som$meanBMUDistance, mean(bmus))
     som = som %>% 
       somLog("Iteration: ", som$iteration, ", Mean Distance = ", round(mean(bmus),3),"\n")
@@ -144,7 +149,7 @@ somClear <- function(som) {
   return(som)
 }
 
-somInit <- function(inputSize, gridWidth, gridHeight, evaluateEveryN=10) {
+somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, evaluateSize=100) {
    # set.seed(12345)
   
   x=list(inputSize=inputSize,
@@ -152,7 +157,8 @@ somInit <- function(inputSize, gridWidth, gridHeight, evaluateEveryN=10) {
       gridHeight=gridHeight,
       log="",
       echo=T,
-      evaluateEveryN=evaluateEveryN
+      evaluateFrequency=evaluateFrequency,
+      evaluateSampleSize=evaluateSize
     )
   
   som=x %>% 
@@ -196,21 +202,22 @@ plotNeighbor = function(som) {
 }
 
 plotSOMFeature = function(som, feature) {
-  z=as.data.frame((som$weights+1)/2.0)
+  z=as.data.frame(som$weights)
   z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
   z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
   
   if (feature=="RGB") {
-    p = ggplot(data=z, aes(x=nodesCol, y=nodesRow, fill=rgb(R,G,B))) +
+    p = ggplot(data=z, aes(x=nodesCol, y=nodesRow, fill=rgb(rescale(R),rescale(G),rescale(B)))) +
       scale_fill_identity()
   }
-  else
-    p = ggplot(data=z, aes_string(x="nodesCol", y="nodesRow", fill=feature))
+  else {
+    p = ggplot(data=z, aes_string(x="nodesCol", y="nodesRow", fill=feature)) +
+    scale_fill_gradientn(colours=rev(rainbow(100,end=4/6)))
+  }
   
   p +
     geom_tile(show.legend=F) +
-    xlab("") +
-    ylab("") +
+    labs(x=NULL,y=NULL) +
     xlim(0,som$gridWidth+1) +
     ylim(0,som$gridHeight+1) +
     coord_fixed()

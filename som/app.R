@@ -27,17 +27,20 @@ ui <- fluidPage(
       includeCSS("styles.css"),
       
       selectInput("sDataset", "Dataset:", c("Colors","Dublin")),
-      numericInput("nMaxIterations", "Max Iterations:", 500, min=1, max=10000, step=100),
       
       bsCollapse(id="Options",
+        bsCollapsePanel("Training",
+          numericInput("nMaxIterations", "Max Iterations:", 500, min=1, max=10000, step=100),
+          numericInput("nEvaluateSize", "Evaluate Sample Size (%):", 100, min=1, max=100, step=10),
+          numericInput("nEvaluateFrequency", "Evaluate Frequency (per N iterations):", 10, min=1, max=1000, step=10)),
         bsCollapsePanel("Grid",
-          numericInput("nGridWidth","Width:", 50, min=5, step=1),
-          numericInput("nGridHeight", "Height:", 50, min=5, step=1)),
+          numericInput("nGridWidth","Width:", 50, min=5, step=5),
+          numericInput("nGridHeight", "Height:", 50, min=5, step=5)),
         bsCollapsePanel("Learning",
-          sliderInput("nStartRate","Start Training Rate:", 0.8, min=0.1, max=1, step=0.1),
+          numericInput("nStartRate","Start Training Rate:", 0.8, min=0.1, max=1, step=0.1),
           numericInput("nEndRate","End Training Rate:", 0.003, min=0.0, max=1, step=0.0005), 
-          sliderInput("nStartWidth","Start Neighbour Width:", 30, min=1, max=100, step=1),
-          sliderInput("nEndWidth","End Neighbour Width:", 5, min=1, max=100, step=1)
+          sliderInput("nStartWidth","Start Neighbour Width (%):", 60, min=1, max=100, step=1),
+          sliderInput("nEndWidth","End Neighbour Width (%):", 5, min=1, max=100, step=1)
           )),
 
       textInput("txtRun","Run Name:", "Run_1"),
@@ -65,6 +68,29 @@ ui <- fluidPage(
 
 server <- function(session, input, output) {
   
+  observeEvent(input$sDataset, {
+    if (input$sDataset=="Colors") {
+      updateNumericInput(session, "nMaxIterations", value=500)
+      updateNumericInput(session, "nEvaluateSize", value=100)
+      updateNumericInput(session, "nGridWidth", value=50)
+      updateNumericInput(session, "nGridHeight", value=50)
+      updateNumericInput(session, "nStartRate", value=0.8)
+      updateNumericInput(session, "nEndRate", value=0.003)
+      updateSliderInput(session, "nStartWidth", value=60)
+      updateSliderInput(session, "nEndWidth", value=5)
+    }
+    if (input$sDataset=="Dublin") {
+      updateNumericInput(session, "nMaxIterations", value=10000)
+      updateNumericInput(session, "nEvaluateSize", value=10)
+      updateNumericInput(session, "nGridWidth", value=20)
+      updateNumericInput(session, "nGridHeight", value=20)
+      updateNumericInput(session, "nStartRate", value=0.05)
+      updateNumericInput(session, "nEndRate", value=0.01)
+      updateSliderInput(session, "nStartWidth", value=60)
+      updateSliderInput(session, "nEndWidth", value=5)
+    }
+  })
+  
   getTrainingData = reactive({
     isolate({
       if (input$sDataset == "Colors") {
@@ -72,18 +98,29 @@ server <- function(session, input, output) {
                            nrow=15,
                            ncol=3)
         dimnames(mydata) = list(NULL, c("R","G","B"))
+        featureList = c("RGB")
       }
       if (input$sDataset=="Dublin") {
         mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+        featureList = c()
       }
     })
+    updateSelectInput(session, "sFeature", "Feature:", c(featureList, colnames(mydata)))
     return(mydata)
   })
   
   getSom = reactive({
     if (is.null(rValues[["rsom"]])) {
-      som = somInit(ncol(getTrainingData()), input$nGridWidth, input$nGridHeight) %>% 
-        somSetLearningParameters(input$nMaxIterations, input$nStartRate, input$nEndRate, input$nStartWidth, input$nEndWidth) %>% 
+      som = somInit(ncol(getTrainingData()), 
+                    input$nGridWidth,
+                    input$nGridHeight,
+                    input$nEvaluateFrequency,
+                    input$nEvaluateSize) %>% 
+        somSetLearningParameters(input$nMaxIterations, 
+                                 input$nStartRate,
+                                 input$nEndRate,
+                                 max(1, floor(input$nStartWidth/100 * input$nGridWidth)),
+                                 max(1, floor(input$nEndWidth/100 * input$nGridWidth))) %>% 
         somProgressFn(function(x) progress$set(x))
       rValues$rsom = som
       return(som)
@@ -109,6 +146,7 @@ server <- function(session, input, output) {
   })
   
   observeEvent(input$go1, {
+    
     som = getSom() %>% 
       somTrainStep(getTrainingData())
     
