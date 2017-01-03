@@ -23,7 +23,7 @@ somProgressFn = function(som, fn=NULL) {
 somTrain = function(som, trainingData, runName="test") { 
   
   som$runName = runName
-  som=somLog(som, "Samples: Length=", som$inputSize, "\n")
+  som=somLog(som, "Training samples = ", nrow(trainingData), "\n")
   dimnames(som$weights) = list(NULL, colnames(trainingData))
   
   while (som$iteration <= som$maxIterations) {
@@ -44,6 +44,7 @@ somTrain = function(som, trainingData, runName="test") {
 somTrainStep = function(som, trainingData) {
   x=trainingData[sample(1:nrow(trainingData), size=1),] # choose 1 training sample randomly from samples
   dimnames(som$weights) = list(NULL, colnames(trainingData))
+  som$stepping=T
   
   som = som %>%
     somLearn(x) %>% 
@@ -60,20 +61,23 @@ i2rc = function(index) {
   cat(bmuRow, ", ", bmuCol,"\n")
 }
 
+# Find the weight corrections after processing a single training sample x
 somLearn = function(som, x) {
   
   bmu = findBMU(som, x)
   bmuRow = ceiling(bmu$index/som$gridWidth)
   bmuCol = bmu$index - ((bmuRow-1) * som$gridWidth)
-  w22 = 2.0*som$rbfWidth*som$rbfWidth
   
-  locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
-  locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
-
+  # locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
+  # locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
+  
+  locationRow = rep(1:som$gridHeight, each=som$gridWidth)
+  locationCol = rep(1:som$gridWidth, times=som$gridHeight)
+  
   deltaRow = (locationRow-bmuRow)^2
   deltaCol = (locationCol-bmuCol)^2
   
-  v = (deltaRow/w22) + (deltaCol/w22)
+  v = (deltaRow/som$rbfWidthSqTimes2) + (deltaCol/som$rbfWidthSqTimes2)
   neighbor = exp(-v)
 
   d = -1*sweep(som$weights,2,x) # same as d=x-weights
@@ -89,6 +93,7 @@ somCorrect = function(som) {
   
   som$learningRate = som$learningRate - som$rateStep
   som$rbfWidth = som$rbfWidth - som$widthStep
+  som$rbfWidthSqTimes2 = 2.0*(som$rbfWidth^2)
   return(som)
 }
 
@@ -96,26 +101,26 @@ somCorrect = function(som) {
 # this is the neuron with the closest euclidean distance to the input numbers
 findBMU = function(som, x) {
   delta = sweep(som$weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
-  distances = sqrt(rowSums(delta*delta))
+  distances = rowSums(delta*delta)
   minDistIndex = which.min(distances)
   return(list(index=minDistIndex, distance=distances[minDistIndex]))
 }
 
 getBMUDistance = function(x, weights) {
   delta = sweep(weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
-  distances=sqrt(rowSums(delta*delta))
+  distances=rowSums(delta*delta)
   return(distances[which.min(distances)])
 }
 
 getBMUIndex = function(x, weights) {
   delta = sweep(weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
-  distances=sqrt(rowSums(delta*delta))
+  distances=rowSums(delta*delta)
   return(which.min(distances))
 }
 
 somEvaluate = function(som, trainingData) {
   if (som$iteration %% som$evaluateFrequency == 0) {
-    bmus = apply(trainingData[sample(1:nrow(trainingData), size=som$evaluateSampleSize/100*nrow(trainingData)),], 1, getBMUDistance, som$weights)
+    bmus = apply(trainingData[sample(1:nrow(trainingData), size=som$evaluateSampleProp*nrow(trainingData)),], 1, getBMUDistance, som$weights)
     som$meanBMUDistance = c(som$meanBMUDistance, mean(bmus))
     som = som %>% 
       somLog("Iteration: ", som$iteration, ", Mean Distance = ", round(mean(bmus),3),"\n")
@@ -125,6 +130,7 @@ somEvaluate = function(som, trainingData) {
 
 somNext = function(som) {
   som$iteration = som$iteration+1
+  if (!is.null(som$progressFn)) som$progressFn(som$iteration/som$maxIterations)
   return(som)
 }
 
@@ -143,13 +149,14 @@ somClear <- function(som) {
   
   som$learningRate = som$startRate
   som$rbfWidth = som$startWidth
+  som$rbfWidthSqTimes2 = 2.0*(som$rbfWidth^2)
   som$iteration = 0
   som$meanBMUDistance = c()
   
   return(som)
 }
 
-somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, evaluateSize=100) {
+somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, evaluateSampleProp=1.0) {
    # set.seed(12345)
   
   x=list(inputSize=inputSize,
@@ -158,13 +165,14 @@ somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, eval
       log="",
       echo=T,
       evaluateFrequency=evaluateFrequency,
-      evaluateSampleSize=evaluateSize
+      evaluateSampleProp=evaluateSampleProp,
+      stepping=F
     )
   
   som=x %>% 
     somSetLearningParameters() %>% 
     somClear() %>% 
-    somLog("SOM initiated: Input Size=", inputSize, ", Grid=", gridWidth,"*",gridHeight,"\n") %>% 
+    somLog("SOM initiated: Input Dimensions=", inputSize, ", Grid=", gridWidth,"*",gridHeight,"\n") %>% 
     somProgressFn()
   
   return(som)
@@ -192,12 +200,13 @@ plotNeighbor = function(som) {
   ggplot(data=z, aes(x=x, y=y, fill=rgb(z,z,z))) +
     geom_tile() +
     scale_fill_identity() +
-    xlab("") +
-    ylab("") +
+    labs(x=NULL, y=NULL) +
     xlim(0,som$gridWidth+1) +
     ylim(0,som$gridHeight+1) +
     coord_fixed() +
-    geom_tile(aes(x=bmuCol, y=bmuRow), fill=rgb(1,0,0))
+    geom_tile(aes(x=bmuCol, y=bmuRow), fill=rgb(1,0,0)) +
+    theme_minimal() +
+    ggtitle("Neighbors")
 
 }
 
@@ -220,7 +229,9 @@ plotSOMFeature = function(som, feature) {
     labs(x=NULL,y=NULL) +
     xlim(0,som$gridWidth+1) +
     ylim(0,som$gridHeight+1) +
-    coord_fixed()
+    coord_fixed() +
+    theme_minimal() +
+    ggtitle(feature)
 }
 
 plotClusters = function(som, nClusters=4) {
@@ -232,11 +243,11 @@ plotClusters = function(som, nClusters=4) {
   z %>% 
     ggplot(aes(x=nodesCol, y=nodesRow)) +
     geom_tile(aes(fill=cluster), show.legend=F) +
-    xlab("") +
-    ylab("") +
+    labs(x=NULL,y=NULL) +
     xlim(0,som$gridWidth+1) +
     ylim(0,som$gridHeight+1) +
-    coord_fixed()
+    coord_fixed() +
+    theme_minimal()
 }
 
 plotMeanBMU = function(som) {
@@ -245,26 +256,28 @@ plotMeanBMU = function(som) {
     geom_line()
 }
 
-plotNodeCount = function(som, trainingData) {
+# count the number of samples that BMU to each node
+plotBMUCount = function(som, trainingData) {
   bmus = apply(trainingData, 1, getBMUIndex, som$weights)
   counts = numeric(som$gridWidth*som$gridHeight)
   for (i in 1:length(bmus)) {
     counts[bmus[i]] = counts[bmus[i]]+1
   }
   
-  z=data.frame(counts=rescale(counts))
+  z=data.frame(counts=counts)
   z$nodesRow = 1+(0:(som$gridWidth * som$gridHeight-1) %% som$gridWidth)
   z$nodesCol = rep(1:som$gridWidth, each=som$gridHeight)
   
   z %>% 
     ggplot(aes(x=nodesCol, y=nodesRow)) +
-      geom_tile(aes(fill=counts), show.legend=F) +
-      scale_fill_gradient() +
-      xlab("") +
-      ylab("") +
+      geom_tile(aes(fill=counts), show.legend=T) +
+      scale_fill_gradientn(colours=rev(rainbow(4000,end=4/6))) +
+      labs(x=NULL,y=NULL) +
       xlim(0,som$gridWidth+1) +
       ylim(0,som$gridHeight+1) +
-      coord_fixed()
+      coord_fixed() +
+      theme_minimal() +
+      ggtitle("BMUs per Node")
 }
 
 testsom = function() {
@@ -278,4 +291,14 @@ testsom = function() {
 
   return(som)
 }
+
+testdublin = function() {
+  mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+  som=somInit(inputSize=4, gridWidth=50, gridHeight=50, evaluateFrequency=100, evaluateSampleProp=0.1) %>% 
+    somSetLearningParameters(maxIterations=1, startRate = 0.05, endRate = 0.001, startWidth = 10, endWidth=2) %>% 
+    somTrain(mydata)
+}
+
+mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+x=somInit(inputSize=4, gridWidth=50, gridHeight=50, evaluateFrequency=100, evaluateSampleProp=0.1)
 

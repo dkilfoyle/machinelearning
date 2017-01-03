@@ -78,50 +78,55 @@ server <- function(session, input, output) {
       updateNumericInput(session, "nEndRate", value=0.003)
       updateSliderInput(session, "nStartWidth", value=60)
       updateSliderInput(session, "nEndWidth", value=5)
+      rValues$rsom = NULL
+      featureList = c("RGB")
     }
     if (input$sDataset=="Dublin") {
-      updateNumericInput(session, "nMaxIterations", value=10000)
+      updateNumericInput(session, "nMaxIterations", value=100)
       updateNumericInput(session, "nEvaluateSize", value=10)
       updateNumericInput(session, "nGridWidth", value=20)
       updateNumericInput(session, "nGridHeight", value=20)
-      updateNumericInput(session, "nStartRate", value=0.05)
+      updateNumericInput(session, "nStartRate", value=0.5)
       updateNumericInput(session, "nEndRate", value=0.01)
       updateSliderInput(session, "nStartWidth", value=60)
       updateSliderInput(session, "nEndWidth", value=5)
+      rValues$rsom = NULL
+      featureList = c()
     }
+    mydata = getTrainingData()
+    updateSelectInput(session, "sFeature", "Feature:", c(featureList, colnames(mydata)))
   })
   
-  getTrainingData = reactive({
+  getTrainingData = function() {
     isolate({
-      if (input$sDataset == "Colors") {
-        mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
-                           nrow=15,
-                           ncol=3)
-        dimnames(mydata) = list(NULL, c("R","G","B"))
-        featureList = c("RGB")
-      }
-      if (input$sDataset=="Dublin") {
-        mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
-        featureList = c()
-      }
-    })
-    updateSelectInput(session, "sFeature", "Feature:", c(featureList, colnames(mydata)))
+    if (input$sDataset == "Colors") {
+      mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
+                         nrow=15,
+                         ncol=3)
+      dimnames(mydata) = list(NULL, c("R","G","B"))
+
+    }
+    if (input$sDataset=="Dublin") {
+      mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+    }
+
     return(mydata)
-  })
+    })
+  }
   
   getSom = reactive({
     if (is.null(rValues[["rsom"]])) {
-      som = somInit(ncol(getTrainingData()), 
-                    input$nGridWidth,
-                    input$nGridHeight,
-                    input$nEvaluateFrequency,
-                    input$nEvaluateSize) %>% 
+      som = somInit(inputSize = ncol(getTrainingData()), 
+                    gridWidth = input$nGridWidth,
+                    gridHeight = input$nGridHeight,
+                    evaluateFrequency = input$nEvaluateFrequency,
+                    evaluateSampleProp = input$nEvaluateSize/100) %>% 
         somSetLearningParameters(input$nMaxIterations, 
                                  input$nStartRate,
                                  input$nEndRate,
                                  max(1, floor(input$nStartWidth/100 * input$nGridWidth)),
-                                 max(1, floor(input$nEndWidth/100 * input$nGridWidth))) %>% 
-        somProgressFn(function(x) progress$set(x))
+                                 max(1, floor(input$nEndWidth/100 * input$nGridWidth)))
+
       rValues$rsom = som
       return(som)
     }
@@ -136,6 +141,7 @@ server <- function(session, input, output) {
     on.exit(progress$close())
     
     som = getSom() %>% 
+      somProgressFn(function(x) progress$set(x)) %>% 
       somTrain(getTrainingData(), runName=input$txtRun)
 
     rValues$run.n = rValues$run.n + 1
@@ -172,10 +178,22 @@ server <- function(session, input, output) {
   
  output$distPlot <- renderPlot({
    som = rValues$rsom
-   multiplot(plotMeanBMU(som), 
-             plotNodeCount(som, getTrainingData()),
-             plotSOMFeature(som,input$sFeature),
-             plotClusters(som, input$nNumClusters), cols=2)
+   if (is.null(som)) return(NULL)
+   
+   if (som$stepping) {
+     multiplot(plotBMUCount(som, getTrainingData()),
+               plotNeighbor(som),
+               plotSOMFeature(som,input$sFeature),
+               plotClusters(som, input$nNumClusters), cols=2)
+   }
+   else {
+     multiplot(plotMeanBMU(som), 
+               plotBMUCount(som, getTrainingData()),
+               plotSOMFeature(som,input$sFeature),
+               plotClusters(som, input$nNumClusters), cols=2)
+   }
+   
+
  })
  
  output$network = renderVisNetwork({
