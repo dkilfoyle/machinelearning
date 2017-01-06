@@ -55,9 +55,9 @@ somTrainStep = function(som, trainingData) {
     return(som)
 }
 
-i2rc = function(index) {
-  bmuRow = ceiling(index/50)
-  bmuCol = index - ((bmuRow-1) * 50)
+i2rc = function(som, index) {
+  bmuRow = ceiling(index/som$gridWidth)
+  bmuCol = index - ((bmuRow-1) * som$gridWidths)
   cat(bmuRow, ", ", bmuCol,"\n")
 }
 
@@ -65,33 +65,16 @@ i2rc = function(index) {
 somLearn = function(som, x) {
   
   bmu = findBMU(som, x)
-  bmuRow = ceiling(bmu$index/som$gridWidth)
-  bmuCol = bmu$index - ((bmuRow-1) * som$gridWidth)
-  
-  # locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
-  # locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
-  
-  # locationRow = rep(1:som$gridHeight, each=som$gridWidth)
-  # locationCol = rep(1:som$gridWidth, times=som$gridHeight)
-  
-  # deltaRow = (locationRow-bmuRow)^2
-  # deltaCol = (locationCol-bmuCol)^2
-  
-  deltaRow = (som$indices$R-bmuRow)^2
-  deltaCol = (som$indices$C-bmuCol)^2
-  
+
+  deltaRow = (som$indices$R-bmu$nodeRow)^2
+  deltaCol = (som$indices$C-bmu$nodeCol)^2
   nodeDistSquared = deltaRow + deltaCol
   theta_t = exp(-nodeDistSquared/som$rbfWidthSqTimes2)
   
-  # v = (deltaRow/som$rbfWidthSqTimes2) + (deltaCol/som$rbfWidthSqTimes2)
-  neighbor = theta_t #exp(-v)
-  
-  # cat("Theta max = ", max(neighbor), ", min = ", min(neighbor), " LR = ", som$learningRate,"\n")
-
   weightDeltas = -1*sweep(som$weights,2,x) # same as d=x-weights
-  som$corrections = (weightDeltas * neighbor * som$learningRate)
+  som$corrections = (weightDeltas * theta_t * som$learningRate)
 
-  som$neighbor = neighbor
+  som$neighbor = theta_t
   som$bmu = bmu
   return(som)
 }
@@ -99,11 +82,13 @@ somLearn = function(som, x) {
 somCorrect = function(som) {
   som$weights = som$weights + som$corrections
   
-  # TODO: expoential decay to learning rate and rbfWidth
+  # learning rate exponential decay
+  som$learningRate = som$startRate * exp(-som$iteration/som$maxIterations)
   
-  som$learningRate = som$learningRate - som$rateStep
-  som$rbfWidth = som$rbfWidth - som$widthStep
+  # radial basis function width exponential decay
+  som$rbfWidth = som$startWidth * exp(-som$iteration / (som$maxIterations/log(som$startWidth)))
   som$rbfWidthSqTimes2 = 2.0*(som$rbfWidth^2)
+  
   return(som)
 }
 
@@ -113,7 +98,10 @@ findBMU = function(som, x) {
   delta = sweep(som$weights,2,x) # same as -1 * (x - weights) and the -1 gets squared out in next line
   distances = rowSums(delta*delta)
   minDistIndex = which.min(distances)
-  return(list(index=minDistIndex, distance=distances[minDistIndex]))
+  return(list(index=minDistIndex, 
+              distanceSq=distances[minDistIndex],
+              nodeRow = som$indices$R[minDistIndex],
+              nodeCol = som$indices$C[minDistIndex]))
 }
 
 getBMUDistance = function(x, weights) {
@@ -133,7 +121,7 @@ somEvaluate = function(som, trainingData) {
     bmus = apply(trainingData[sample(1:nrow(trainingData), size=som$evaluateSampleProp*nrow(trainingData)),], 1, getBMUDistance, som$weights)
     som$meanBMUDistance = c(som$meanBMUDistance, mean(bmus))
     som = som %>% 
-      somLog("Iteration: ", som$iteration, ", Mean Distance = ", round(mean(bmus),3),"\n")
+      somLog("Iteration: ", som$iteration, ", Mean Distance Sq = ", round(mean(bmus),3),"\n")
   }
   return(som)
 }
@@ -173,14 +161,10 @@ somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, eval
   return(som)
 }
 
-somSetLearningParameters <- function(som, maxIterations=1000, startRate=0.8, endRate=0.003, startWidth=30, endWidth=5) {
+somSetLearningParameters <- function(som, maxIterations=1000, startRate=0.8, startWidth=30) {
   som$maxIterations=maxIterations
   som$startRate = startRate
-  som$endRate = endRate
   som$startWidth = startWidth
-  som$endWidth = endWidth
-  som$rateStep = (startRate-endRate)/maxIterations
-  som$widthStep = (startWidth-endWidth)/maxIterations
   return(som)
 }
 

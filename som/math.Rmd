@@ -34,9 +34,9 @@ $$ W_v(t+1) = W_v(t) + \theta(v,t) \times \alpha(t) \times (X(t) - W_v(t)) $$
 
   3. Use the Gaussian function as a radial basis function for neighbour weighting (x1,x2 are the row and column disctnaces from the BMU)
 
-$$ f(x_1,x_2) = e^{-v} $$
+$$ \theta(x_1,x_2) = e^{-v} $$
 
-$$ v = \sum_{i=1}^n\frac{x_i-c^2}{2w^2} $$
+$$ v = \sum_{i=1}^n\frac{(x_i-c)^2}{2w^2} $$
 
 ```{r}
 dist = 1^2:20^2 + 1^2:20^2
