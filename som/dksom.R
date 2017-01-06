@@ -71,17 +71,25 @@ somLearn = function(som, x) {
   # locationRow = ceiling(1:nrow(som$weights)/som$gridWidth)
   # locationCol = 1:nrow(som$weights) - ((locationRow-1) * som$gridWidth)
   
-  locationRow = rep(1:som$gridHeight, each=som$gridWidth)
-  locationCol = rep(1:som$gridWidth, times=som$gridHeight)
+  # locationRow = rep(1:som$gridHeight, each=som$gridWidth)
+  # locationCol = rep(1:som$gridWidth, times=som$gridHeight)
   
-  deltaRow = (locationRow-bmuRow)^2
-  deltaCol = (locationCol-bmuCol)^2
+  # deltaRow = (locationRow-bmuRow)^2
+  # deltaCol = (locationCol-bmuCol)^2
   
-  v = (deltaRow/som$rbfWidthSqTimes2) + (deltaCol/som$rbfWidthSqTimes2)
-  neighbor = exp(-v)
+  deltaRow = (som$indices$R-bmuRow)^2
+  deltaCol = (som$indices$C-bmuCol)^2
+  
+  nodeDistSquared = deltaRow + deltaCol
+  theta_t = exp(-nodeDistSquared/som$rbfWidthSqTimes2)
+  
+  # v = (deltaRow/som$rbfWidthSqTimes2) + (deltaCol/som$rbfWidthSqTimes2)
+  neighbor = theta_t #exp(-v)
+  
+  # cat("Theta max = ", max(neighbor), ", min = ", min(neighbor), " LR = ", som$learningRate,"\n")
 
-  d = -1*sweep(som$weights,2,x) # same as d=x-weights
-  som$corrections = (d * neighbor * som$learningRate)
+  weightDeltas = -1*sweep(som$weights,2,x) # same as d=x-weights
+  som$corrections = (weightDeltas * neighbor * som$learningRate)
 
   som$neighbor = neighbor
   som$bmu = bmu
@@ -90,6 +98,8 @@ somLearn = function(som, x) {
 
 somCorrect = function(som) {
   som$weights = som$weights + som$corrections
+  
+  # TODO: expoential decay to learning rate and rbfWidth
   
   som$learningRate = som$learningRate - som$rateStep
   som$rbfWidth = som$rbfWidth - som$widthStep
@@ -134,27 +144,7 @@ somNext = function(som) {
   return(som)
 }
 
-somClear <- function(som) {
-  
-  # set weights to random numbers -1.0..1.0
-  # each input will connect to every neuron in grid
-  # the grid is flattened into a 1d array (rows)
-  # the weight from each input is in each col
-  
-  som$weights = matrix(runif(som$gridWidth*som$gridHeight*som$inputSize, min=-1.0, max=1.0),
-    nrow=som$gridWidth*som$gridHeight,
-    ncol=som$inputSize)
-  
-  som$corrections = matrix(0, nrow=som$gridWidth*som$gridHeight, ncol=som$inputSize)
-  
-  som$learningRate = som$startRate
-  som$rbfWidth = som$startWidth
-  som$rbfWidthSqTimes2 = 2.0*(som$rbfWidth^2)
-  som$iteration = 0
-  som$meanBMUDistance = c()
-  
-  return(som)
-}
+
 
 somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, evaluateSampleProp=1.0) {
    # set.seed(12345)
@@ -168,6 +158,11 @@ somInit <- function(inputSize, gridWidth, gridHeight, evaluateFrequency=10, eval
       evaluateSampleProp=evaluateSampleProp,
       stepping=F
     )
+  
+  x$indices = data.frame(
+    R = rep(1:gridHeight, each=gridWidth),
+    C = rep(1:gridWidth, times=gridHeight)
+  )
   
   som=x %>% 
     somSetLearningParameters() %>% 
@@ -189,13 +184,36 @@ somSetLearningParameters <- function(som, maxIterations=1000, startRate=0.8, end
   return(som)
 }
 
+somClear <- function(som) {
+  
+  # set weights to random numbers -1.0..1.0
+  # each input will connect to every neuron in grid
+  # the grid is flattened into a 1d array (rows)
+  # the weight from each input is in each col
+  
+  som$weights = matrix(runif(som$gridWidth*som$gridHeight*som$inputSize, min=-2.0, max=2.0),
+                       nrow=som$gridWidth*som$gridHeight,
+                       ncol=som$inputSize)
+  
+  som$corrections = matrix(0, nrow=som$gridWidth*som$gridHeight, ncol=som$inputSize)
+  
+  som$learningRate = som$startRate
+  som$rbfWidth = som$startWidth
+  som$rbfWidthSqTimes2 = 2.0*(som$rbfWidth^2)
+  som$iteration = 0
+  som$meanBMUDistance = c()
+  
+  return(som)
+}
+
+
 plotNeighbor = function(som) {
   z=data.frame(z=som$neighbor)
-  z$y = ceiling(1:length(som$neighbor)/som$gridWidth)
-  z$x = 1:length(som$neighbor) - ((z$y-1) * som$gridWidth)
+  z$y = som$indices$R #ceiling(1:length(som$neighbor)/som$gridWidth)
+  z$x = som$indices$C #1:length(som$neighbor) - ((z$y-1) * som$gridWidth)
   
-  bmuRow = ceiling(som$bmu$index/som$gridWidth)
-  bmuCol = som$bmu$index - ((bmuRow-1) * som$gridWidth)
+  bmuRow = som$indices$R[som$bmu$index] #ceiling(som$bmu$index/som$gridWidth)
+  bmuCol = som$indices$C[som$bmu$index] #som$bmu$index - ((bmuRow-1) * som$gridWidth)
   
   ggplot(data=z, aes(x=x, y=y, fill=rgb(z,z,z))) +
     geom_tile() +
@@ -293,12 +311,15 @@ testsom = function() {
 }
 
 testdublin = function() {
-  mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+  mydata = as.matrix(readRDS("census.Rda")[,c(2,4,5,8)])
+  # mydata= rescale(mydata, to=c(-1,1))
+  mydata=scale(mydata)
   som=somInit(inputSize=4, gridWidth=50, gridHeight=50, evaluateFrequency=100, evaluateSampleProp=0.1) %>% 
     somSetLearningParameters(maxIterations=1, startRate = 0.05, endRate = 0.001, startWidth = 10, endWidth=2) %>% 
+    somClear
     somTrain(mydata)
 }
 
-mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
-x=somInit(inputSize=4, gridWidth=50, gridHeight=50, evaluateFrequency=100, evaluateSampleProp=0.1)
+# mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+# x=somInit(inputSize=4, gridWidth=50, gridHeight=50, evaluateFrequency=100, evaluateSampleProp=0.1)
 

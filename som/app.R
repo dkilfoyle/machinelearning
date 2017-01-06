@@ -37,8 +37,8 @@ ui <- fluidPage(
           numericInput("nGridWidth","Width:", 50, min=5, step=5),
           numericInput("nGridHeight", "Height:", 50, min=5, step=5)),
         bsCollapsePanel("Learning",
-          numericInput("nStartRate","Start Training Rate:", 0.8, min=0.1, max=1, step=0.1),
-          numericInput("nEndRate","End Training Rate:", 0.003, min=0.0, max=1, step=0.0005), 
+          numericInput("nStartRate","Start Training Rate:", 0.8, min=0.001, max=1, step=0.001),
+          numericInput("nEndRate","End Training Rate:", 0.003, min=0.001, max=1, step=0.001), 
           sliderInput("nStartWidth","Start Neighbour Width (%):", 60, min=1, max=100, step=1),
           sliderInput("nEndWidth","End Neighbour Width (%):", 5, min=1, max=100, step=1)
           )),
@@ -72,11 +72,11 @@ server <- function(session, input, output) {
     if (input$sDataset=="Colors") {
       updateNumericInput(session, "nMaxIterations", value=500)
       updateNumericInput(session, "nEvaluateSize", value=100)
-      updateNumericInput(session, "nGridWidth", value=50)
-      updateNumericInput(session, "nGridHeight", value=50)
+      updateNumericInput(session, "nGridWidth", value=5)
+      updateNumericInput(session, "nGridHeight", value=5)
       updateNumericInput(session, "nStartRate", value=0.8)
       updateNumericInput(session, "nEndRate", value=0.003)
-      updateSliderInput(session, "nStartWidth", value=60)
+      updateSliderInput(session, "nStartWidth", value=50)
       updateSliderInput(session, "nEndWidth", value=5)
       rValues$rsom = NULL
       featureList = c("RGB")
@@ -86,10 +86,10 @@ server <- function(session, input, output) {
       updateNumericInput(session, "nEvaluateSize", value=10)
       updateNumericInput(session, "nGridWidth", value=20)
       updateNumericInput(session, "nGridHeight", value=20)
-      updateNumericInput(session, "nStartRate", value=0.5)
-      updateNumericInput(session, "nEndRate", value=0.01)
-      updateSliderInput(session, "nStartWidth", value=60)
-      updateSliderInput(session, "nEndWidth", value=5)
+      updateNumericInput(session, "nStartRate", value=0.05)
+      updateNumericInput(session, "nEndRate", value=0.001)
+      updateSliderInput(session, "nStartWidth", value=50)
+      updateSliderInput(session, "nEndWidth", value=1)
       rValues$rsom = NULL
       featureList = c()
     }
@@ -100,16 +100,17 @@ server <- function(session, input, output) {
   getTrainingData = function() {
     isolate({
     if (input$sDataset == "Colors") {
-      mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
-                         nrow=15,
+      mydata =    matrix(runif(1500*3, min=-1.0, max=1.0),
+                         nrow=1500,
                          ncol=3)
       dimnames(mydata) = list(NULL, c("R","G","B"))
 
     }
     if (input$sDataset=="Dublin") {
-      mydata = as.matrix(scale(readRDS("census.Rda")[,c(2,4,5,8)]))
+      mydata = as.matrix(readRDS("census.Rda")[,c(2,4,5,8)])
+      mydata = scale(mydata)
     }
-
+ 
     return(mydata)
     })
   }
@@ -121,11 +122,12 @@ server <- function(session, input, output) {
                     gridHeight = input$nGridHeight,
                     evaluateFrequency = input$nEvaluateFrequency,
                     evaluateSampleProp = input$nEvaluateSize/100) %>% 
-        somSetLearningParameters(input$nMaxIterations, 
-                                 input$nStartRate,
-                                 input$nEndRate,
-                                 max(1, floor(input$nStartWidth/100 * input$nGridWidth)),
-                                 max(1, floor(input$nEndWidth/100 * input$nGridWidth)))
+        somSetLearningParameters(maxIterations = input$nMaxIterations, 
+                                 startRate = input$nStartRate,
+                                 endRate = input$nEndRate,
+                                 startWidth = max(1, floor(input$nStartWidth/100 * input$nGridWidth)),
+                                 endWidth = max(1, floor(input$nEndWidth/100 * input$nGridWidth))) %>% 
+        somClear()
 
       rValues$rsom = som
       return(som)
