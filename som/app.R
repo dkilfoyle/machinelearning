@@ -16,7 +16,7 @@ ui <- fluidPage(
   shiny::tags$head(shiny::tags$style(shiny::HTML(
     "#consoleOutput { font-size: 11pt; height: 400px; overflow: auto; }"
   ))),
-   
+  
   # Application title
   titlePanel("Self Organizing Map"),
    
@@ -26,18 +26,19 @@ ui <- fluidPage(
     sidebarPanel(
       includeCSS("styles.css"),
       
-      selectInput("rbDataset", "Dataset:", c("Colors","Titanic","Iris")),
-      numericInput("nMaxIterations", "Max Iterations:", 500, min=1, max=10000, step=100),
+      selectInput("sDataset", "Dataset:", c("Colors","Dublin")),
       
       bsCollapse(id="Options",
+        bsCollapsePanel("Training",
+          numericInput("nMaxIterations", "Max Iterations:", 500, min=1, max=10000, step=100),
+          numericInput("nEvaluateSize", "Evaluate Sample Size (%):", 100, min=1, max=100, step=10),
+          numericInput("nEvaluateFrequency", "Evaluate Frequency (per N iterations):", 10, min=1, max=1000, step=10)),
         bsCollapsePanel("Grid",
-          numericInput("nGridWidth","Width:", 50, min=5, step=1),
-          numericInput("nGridHeight", "Height:", 50, min=5, step=1)),
+          numericInput("nGridWidth","Width:", 50, min=5, step=5),
+          numericInput("nGridHeight", "Height:", 50, min=5, step=5)),
         bsCollapsePanel("Learning",
-          sliderInput("nStartRate","Start Training Rate:", 0.8, min=0.1, max=1, step=0.1),
-          numericInput("nEndRate","End Training Rate:", 0.003, min=0.0, max=1, step=0.0005), 
-          sliderInput("nStartWidth","Start Neighbour Width:", 30, min=1, max=100, step=1),
-          sliderInput("nEndWidth","End Neighbour Width:", 5, min=1, max=100, step=1)
+          numericInput("nStartRate","Start Learning Rate:", 0.8, min=0.001, max=1, step=0.001),
+          sliderInput("nStartWidth","Start Neighbour Width (%):", 60, min=1, max=100, step=1)
           )),
 
       textInput("txtRun","Run Name:", "Run_1"),
@@ -52,17 +53,12 @@ ui <- fluidPage(
         tabPanel("Info",
           withMathJax(includeHTML("math.html"))),
         tabPanel("Console", pre(id = "consoleOutput", class="shiny-text-output"), style="height:400px; margin-top:20px"), #verbatimTextOutput("console")),
-        tabPanel("Plot", plotOutput("distPlot"), style="margin-top:20px"),
-        tabPanel("Network", 
+        tabPanel("Plot", 
           fluidRow(
-            column(6,
-              radioButtons("rbVisEdges","Edges:", c("weights","updateValues.w","gradient.w", "gradient_sum.w", "lastWtChanges.w"))
-            ),
-            column(6,
-              radioButtons("rbVisNodes","Nodes:", c("z","activations","delta"))
-            )
-          ),
-          visNetworkOutput("network"),  style="margin-top:20px"),
+            column(6, selectInput("sFeature","Feature:", c("RGB","R","G","B"))),
+            column(6, numericInput("nNumClusters","Number of Clusters", 5)),
+            column(12, 
+              plotOutput("distPlot"), style="margin-top:20px"))),
       id="maintabs")
     )
   )
@@ -70,17 +66,61 @@ ui <- fluidPage(
 
 server <- function(session, input, output) {
   
-  getTrainingData = reactive({
-    matrix(runif(15*3, min=-1.0, max=1.0),
-      nrow=15,
-      ncol=3)
+  observeEvent(input$sDataset, {
+    if (input$sDataset=="Colors") {
+      updateNumericInput(session, "nMaxIterations", value=500)
+      updateNumericInput(session, "nEvaluateSize", value=100)
+      updateNumericInput(session, "nGridWidth", value=50)
+      updateNumericInput(session, "nGridHeight", value=50)
+      updateNumericInput(session, "nStartRate", value=0.8)
+      updateSliderInput(session, "nStartWidth", value=50)
+      rValues$rsom = NULL
+      featureList = c("RGB")
+    }
+    if (input$sDataset=="Dublin") {
+      updateNumericInput(session, "nMaxIterations", value=100)
+      updateNumericInput(session, "nEvaluateSize", value=10)
+      updateNumericInput(session, "nGridWidth", value=20)
+      updateNumericInput(session, "nGridHeight", value=20)
+      updateNumericInput(session, "nStartRate", value=0.05)
+      updateSliderInput(session, "nStartWidth", value=50)
+      rValues$rsom = NULL
+      featureList = c()
+    }
+    mydata = getTrainingData()
+    updateSelectInput(session, "sFeature", "Feature:", c(featureList, colnames(mydata)))
   })
+  
+  getTrainingData = function() {
+    isolate({
+    if (input$sDataset == "Colors") {
+      mydata =    matrix(runif(15*3, min=-1.0, max=1.0),
+                         nrow=15,
+                         ncol=3)
+      dimnames(mydata) = list(NULL, c("R","G","B"))
+
+    }
+    if (input$sDataset=="Dublin") {
+      mydata = as.matrix(readRDS("census.Rda")[,c(2,4,5,8)])
+      mydata = scale(mydata)
+    }
+ 
+    return(mydata)
+    })
+  }
   
   getSom = reactive({
     if (is.null(rValues[["rsom"]])) {
-      som = somInit(ncol(getTrainingData()), input$nGridWidth, input$nGridHeight) %>% 
-        somSetLearningParameters(input$nMaxIterations, input$nStartRate, input$nEndRate, input$nStartWidth, input$nEndWidth) %>% 
-        somProgressFn(function(x) progress$set(x))
+      som = somInit(inputSize = ncol(getTrainingData()), 
+                    gridWidth = input$nGridWidth,
+                    gridHeight = input$nGridHeight,
+                    evaluateFrequency = input$nEvaluateFrequency,
+                    evaluateSampleProp = input$nEvaluateSize/100) %>% 
+        somSetLearningParameters(maxIterations = input$nMaxIterations, 
+                                 startRate = input$nStartRate,
+                                 startWidth = max(1, floor(input$nStartWidth/100 * max(input$nGridWidth, input$gridHeight)))) %>% 
+        somClear()
+
       rValues$rsom = som
       return(som)
     }
@@ -95,6 +135,7 @@ server <- function(session, input, output) {
     on.exit(progress$close())
     
     som = getSom() %>% 
+      somProgressFn(function(x) progress$set(x)) %>% 
       somTrain(getTrainingData(), runName=input$txtRun)
 
     rValues$run.n = rValues$run.n + 1
@@ -105,6 +146,7 @@ server <- function(session, input, output) {
   })
   
   observeEvent(input$go1, {
+    
     som = getSom() %>% 
       somTrainStep(getTrainingData())
     
@@ -118,9 +160,10 @@ server <- function(session, input, output) {
   })
   
   observeEvent(input$btnClearRuns, {
+    updateTabsetPanel(session, "maintabs", "Console")
     rValues$MSE.df = data.frame(epoch=c(), MSE=c())
     rValues$run.n=1
-    rValues$rsom = list()
+    rValues$rsom = NULL
   })
   
   output$consoleOutput = renderText({
@@ -129,7 +172,22 @@ server <- function(session, input, output) {
   
  output$distPlot <- renderPlot({
    som = rValues$rsom
-   multiplot(plotsom(som), plotneighbor(som), cols=2)
+   if (is.null(som)) return(NULL)
+   
+   if (som$stepping) {
+     multiplot(plotBMUCount(som, getTrainingData()),
+               plotNeighbor(som),
+               plotSOMFeature(som,input$sFeature),
+               plotClusters(som, input$nNumClusters), cols=2)
+   }
+   else {
+     multiplot(plotMeanBMU(som), 
+               plotBMUCount(som, getTrainingData()),
+               plotSOMFeature(som,input$sFeature),
+               plotClusters(som, input$nNumClusters), cols=2)
+   }
+   
+
  })
  
  output$network = renderVisNetwork({

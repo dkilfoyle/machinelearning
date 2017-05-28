@@ -11,20 +11,53 @@ library(magrittr)
 
 ### Procedure
 
-1. Initialize weights random -1..1
-2. Using inputs find the Best Matching Unit based on euclidean distance
+1. Initialize
 
-$$ \sqrt{\sum_{i=1}^n(p_i-q_i)^2}$$
+  1. Grid to width * height * dimensions of input
+  2. Starting neighbor width to max(gridWidth,gridHeight) / 2
+  3. Starting learning rate to 0.05
+  4. Weights random -1..1
+  
+2. Prepare training data
 
-3. Update weights in the region of the BMU using scaling functions theta and alpha where theta is the nighborhood function and alpha is the per iteration learning rate.
+  1. Scale(data) to mean centred on 0 and ideally range -1 to 1
+
+3. Loop per iteration
+
+  1. Using inputs find the Best Matching Unit based on euclidean distance
+
+$$ \sqrt{\sum_{i=1}^n(p_i-q_i)^2} $$
+
+  2. Update weights in the region of the BMU (v) using scaling functions theta and alpha where theta is the nighborhood function and alpha is the per iteration learning rate.
 
 $$ W_v(t+1) = W_v(t) + \theta(v,t) \times \alpha(t) \times (X(t) - W_v(t)) $$
 
-4. Use the Gaussian function as a radial basis function for neighbour weighting (x1,x2 are the row and column disctnaces from the BMU)
+  3. Use the Gaussian function as a radial basis function for neighbour weighting (x1,x2 are the row and column disctnaces from the BMU)
 
-$$ f(x_1,x_2) = e^{-v} $$
+$$ \theta(x_1,x_2) = e^{-v} $$
 
-$$ v = \sum_{i=1}^n\frac{x_i-c^2}{2w^2} $$
+$$ v = \sum_{i=1}^n\frac{(x_i-c)^2}{2w^2} $$
 
+```{r}
+dist = 1^2:20^2 + 1^2:20^2
+theta_d = exp(-dist/(2*10^2))
+plot(theta_d)
+```
+
+  4. Ideally the width (w) and learning rate alpha should decay exponentially
+  
+  $$ \sigma(t) = \sigma_0 e^{-\frac{t}{\lambda}} $$
+  
+  
+  where $\lambda = \frac{t}{maxt}$
+  
+
+
+```{r}
+sigma_0 = 40/2
+lambda = 100 / log(sigma_0)
+sigma_t = sigma_0 * exp(-(1:100)/lambda)
+plot(sigma_t)
+```
 
 
