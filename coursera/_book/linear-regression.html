@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html >
+
+<head>
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Machine Learning</title>
+  <meta name="description" content="Machine Learning">
+  <meta name="generator" content="bookdown 0.5 and GitBook 2.6.7">
+
+  <meta property="og:title" content="Machine Learning" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Machine Learning" />
+  
+  
+  
+
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  
+<link rel="prev" href="index.html">
+<link rel="next" href="multiple-linear-regression.html">
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+
+
+
+
+
+
+
+<script src="libs/htmlwidgets-0.9/htmlwidgets.js"></script>
+<script src="libs/plotly-binding-4.7.1/plotly.js"></script>
+<script src="libs/typedarray-0.1/typedarray.min.js"></script>
+<link href="libs/crosstalk-1.0.0/css/crosstalk.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.0.0/js/crosstalk.min.js"></script>
+<link href="libs/plotlyjs-1.29.2/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="libs/plotlyjs-1.29.2/plotly-latest.min.js"></script>
+
+
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">A Minimal Book Example</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a></li>
+<li class="chapter" data-level="2" data-path="linear-regression.html"><a href="linear-regression.html"><i class="fa fa-check"></i><b>2</b> Linear Regression</a><ul>
+<li class="chapter" data-level="2.1" data-path="linear-regression.html"><a href="linear-regression.html#model-representation"><i class="fa fa-check"></i><b>2.1</b> Model representation</a></li>
+<li class="chapter" data-level="2.2" data-path="linear-regression.html"><a href="linear-regression.html#cost-function"><i class="fa fa-check"></i><b>2.2</b> Cost Function</a></li>
+<li class="chapter" data-level="2.3" data-path="linear-regression.html"><a href="linear-regression.html#gradient-descent"><i class="fa fa-check"></i><b>2.3</b> Gradient Descent</a><ul>
+<li class="chapter" data-level="2.3.1" data-path="linear-regression.html"><a href="linear-regression.html#delta-theta"><i class="fa fa-check"></i><b>2.3.1</b> Delta theta</a></li>
+<li class="chapter" data-level="2.3.2" data-path="linear-regression.html"><a href="linear-regression.html#code"><i class="fa fa-check"></i><b>2.3.2</b> Code</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="linear-regression.html"><a href="linear-regression.html#demo"><i class="fa fa-check"></i><b>2.4</b> Demo</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html"><i class="fa fa-check"></i><b>3</b> Multiple Linear Regression</a><ul>
+<li class="chapter" data-level="3.1" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#model-representation-1"><i class="fa fa-check"></i><b>3.1</b> Model representation</a></li>
+<li class="chapter" data-level="3.2" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#cost"><i class="fa fa-check"></i><b>3.2</b> Cost</a></li>
+<li class="chapter" data-level="3.3" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#gradient-descent-1"><i class="fa fa-check"></i><b>3.3</b> Gradient Descent</a></li>
+<li class="chapter" data-level="3.4" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#demo-1"><i class="fa fa-check"></i><b>3.4</b> Demo</a></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Machine Learning</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="linear-regression" class="section level1">
+<h1><span class="header-section-number">2</span> Linear Regression</h1>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(latex2exp)</code></pre></div>
+<pre><code>## Warning: package &#39;latex2exp&#39; was built under R version 3.4.1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(shiny)</code></pre></div>
+<pre><code>## Warning: package &#39;shiny&#39; was built under R version 3.4.1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">ex1data1 =<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;ex1data1.txt&quot;</span>, <span class="dt">header=</span><span class="ot">FALSE</span>)
+<span class="kw">names</span>(ex1data1)=<span class="kw">c</span>(<span class="st">&quot;X&quot;</span>,<span class="st">&quot;y&quot;</span>)
+X =<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">1</span>, <span class="kw">nrow</span>(ex1data1)), ex1data1<span class="op">$</span>X), <span class="dt">nrow=</span><span class="kw">nrow</span>(ex1data1), <span class="dt">byrow=</span>F)
+y =<span class="st"> </span>ex1data1<span class="op">$</span>y
+theta=<span class="kw">matrix</span>(<span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>),<span class="dt">nrow=</span><span class="dv">2</span>)</code></pre></div>
+<div id="model-representation" class="section level2">
+<h2><span class="header-section-number">2.1</span> Model representation</h2>
+<p><span class="math display">\[h_{\theta}\left(x\right)\ =\ \theta_0+\theta_1\cdot x\]</span></p>
+<p>Where <span class="math inline">\(\theta_0\)</span> is the y intercept and <span class="math inline">\(\theta_1\)</span> is the gradient of the straight line fit.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggplot</span>(ex1data1, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>y)) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">xlim</span>(<span class="dv">0</span>,<span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method=</span><span class="st">&quot;lm&quot;</span>, <span class="dt">se=</span>F, <span class="dt">fullrange=</span>T)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">lm</span>(y<span class="op">~</span>X)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ X)
+## 
+## Coefficients:
+## (Intercept)           X1           X2  
+##      -3.896           NA        1.193</code></pre>
+</div>
+<div id="cost-function" class="section level2">
+<h2><span class="header-section-number">2.2</span> Cost Function</h2>
+<p><span class="math display">\[J\left(\theta_0,\theta_1\right)=\frac{1}{2\cdot m}\sum_{_{i=1}}^m\left(h_{\theta}\left(x_i\right)-y_i\right)^2\]</span></p>
+<p>Which is the sum of the squared vertical distance of each point from the straight line.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">m=<span class="kw">lm</span>(y<span class="op">~</span>X)
+yhat=m<span class="op">$</span>fitted.values
+diff=y<span class="op">-</span>yhat
+<span class="kw">ggplot</span>(ex1data1, <span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>y)) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">y=</span>yhat)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_segment</span>(<span class="kw">aes</span>(<span class="dt">x=</span>X, <span class="dt">xend=</span>X, <span class="dt">y=</span>y, <span class="dt">yend=</span>yhat, <span class="dt">color=</span><span class="st">&quot;error&quot;</span>))</code></pre></div>
+<p><img src="_main_files/figure-html/costLineGraph-1.png" width="672" /></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">J =<span class="st"> </span><span class="cf">function</span>(X,y,theta) {
+  m=<span class="kw">length</span>(y)
+  ho =<span class="st"> </span>X <span class="op">%*%</span><span class="st"> </span>theta
+  <span class="kw">return</span>(<span class="dv">1</span><span class="op">/</span>(<span class="dv">2</span><span class="op">*</span>m) <span class="op">*</span><span class="st"> </span><span class="kw">sum</span>((ho<span class="op">-</span>y)<span class="op">^</span><span class="dv">2</span>))
+}</code></pre></div>
+</div>
+<div id="gradient-descent" class="section level2">
+<h2><span class="header-section-number">2.3</span> Gradient Descent</h2>
+<p>The aim is to minimize the cost function.</p>
+<p>eg in 1 dimension (keeping theta0 = 0)</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">xs =<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from=</span><span class="dv">0</span>,<span class="dt">to=</span><span class="fl">1.5</span>,<span class="dt">by=</span><span class="fl">0.1</span>)
+cost =<span class="st"> </span><span class="kw">sapply</span>(xs, <span class="cf">function</span>(theta1) <span class="kw">J</span>(X,y,<span class="kw">rbind</span>(<span class="dv">0</span>,theta1)))
+<span class="kw">qplot</span>(<span class="dt">x=</span>xs,<span class="dt">y=</span>cost) <span class="op">+</span><span class="st"> </span><span class="kw">geom_line</span>() <span class="op">+</span><span class="st"> </span><span class="kw">xlab</span>(<span class="kw">TeX</span>(<span class="st">&quot;$</span><span class="ch">\\</span><span class="st">theta_1$&quot;</span>)) <span class="op">+</span><span class="st"> </span><span class="kw">ylab</span>(<span class="kw">TeX</span>(<span class="st">&quot;$J</span><span class="ch">\\</span><span class="st">left(</span><span class="ch">\\</span><span class="st">theta_0=0, </span><span class="ch">\\</span><span class="st">theta_1</span><span class="ch">\\</span><span class="st">right)&quot;</span>))</code></pre></div>
+<p><img src="_main_files/figure-html/cost1dim-1.png" width="672" /></p>
+<p>In 2 dimensions</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">theta1s =<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from=</span><span class="op">-</span><span class="dv">1</span>,<span class="dt">to=</span><span class="dv">4</span>,<span class="dt">length.out=</span><span class="dv">20</span>)
+theta0s =<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from=</span><span class="op">-</span><span class="dv">10</span>,<span class="dt">to=</span><span class="dv">10</span>, <span class="dt">length.out=</span><span class="dv">20</span>)
+cost=<span class="kw">matrix</span>(<span class="dt">nrow=</span><span class="dv">20</span>,<span class="dt">ncol=</span><span class="dv">20</span>)
+<span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>) {
+  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>) {
+    cost[j,i] =<span class="st"> </span><span class="kw">J</span>(X, y, <span class="kw">rbind</span>(theta0s[i], theta1s[j]))
+  }
+}
+<span class="co"># persp(x=theta0s,y=theta1s, cost, theta=-60, axes=T)</span>
+
+<span class="kw">library</span>(plotly)</code></pre></div>
+<pre><code>## Warning: package &#39;plotly&#39; was built under R version 3.4.1</code></pre>
+<pre><code>## 
+## Attaching package: &#39;plotly&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     last_plot</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     filter</code></pre>
+<pre><code>## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     layout</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># plot_ly(x=theta0s, y=theta1s, z=cost, type=&quot;scatter3d&quot;, mode=&#39;markers+lines&#39;)</span>
+<span class="kw">plot_ly</span>(<span class="dt">x=</span>theta0s, <span class="dt">y=</span>theta1s, <span class="dt">z=</span>cost, <span class="dt">type=</span><span class="st">&quot;surface&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">add_trace</span>(<span class="dt">x=</span><span class="kw">c</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="op">-</span><span class="dv">5</span>), <span class="dt">y=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">z=</span><span class="kw">c</span>(<span class="dv">500</span>,<span class="dv">500</span>,<span class="dv">500</span>), <span class="dt">type=</span><span class="st">&quot;scatter3d&quot;</span>, <span class="dt">mode=</span><span class="st">&quot;lines&quot;</span>)</code></pre></div>
+<div id="10647a2b5978" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="10647a2b5978">{"x":{"visdat":{"1064b534f01":["function () ","plotlyVisDat"]},"cur_data":"1064b534f01","attrs":{"1064b534f01":{"x":[-10,-8.94736842105263,-7.89473684210526,-6.84210526315789,-5.78947368421053,-4.73684210526316,-3.68421052631579,-2.63157894736842,-1.57894736842105,-0.526315789473685,0.526315789473683,1.57894736842105,2.63157894736842,3.68421052631579,4.73684210526316,5.78947368421053,6.84210526315789,7.89473684210526,8.94736842105263,10],"y":[-1,-0.736842105263158,-0.473684210526316,-0.210526315789474,0.0526315789473684,0.31578947368421,0.578947368421053,0.842105263157895,1.10526315789474,1.36842105263158,1.63157894736842,1.89473684210526,2.15789473684211,2.42105263157895,2.68421052631579,2.94736842105263,3.21052631578947,3.47368421052632,3.73684210526316,4],"z":[[328.092905549507,303.384885273641,279.784898238772,257.292944444901,235.909023892027,215.633136580149,196.46528250927,178.405461679387,161.453674090502,145.609919742613,130.874198635723,117.246510769829,104.726856144932,93.3152347610331,83.011646618131,73.8160917162263,65.7285700553187,58.7490816354083,52.8776264564953,48.1142045185794],[270.824550954914,248.376863089021,227.037208464124,206.805587080225,187.681998937323,169.666444035418,152.758922374511,136.9594339546,122.267978775687,108.684556837771,96.2091681408527,84.8418126849313,74.5824904700071,65.4312014960802,57.3879457631504,50.452723271218,44.6255340202827,39.9063780103447,36.2952552414039,33.7921657134603],[219.193588522514,199.006233066593,179.926910851669,161.955621877742,145.092366144812,129.33714365288,114.689954401944,101.150798392006,88.7196756230655,77.3965860951219,67.1815298081756,58.0745067622265,50.0755169572746,43.1845603933199,37.4016370703625,32.7267469884023,29.1598901474394,26.7010665474736,25.3502761885051,25.1075190705339],[173.200018252307,155.272995206358,138.454005401406,122.743048837451,108.140125514494,94.6452354325336,82.2583785915706,70.9795549916049,60.8087646326364,51.7460075146651,43.7912836376911,36.9445930017143,31.2059356067347,26.5753114527524,23.0527205397672,20.6381628677793,19.3316384367887,19.1331472467952,20.042689297799,22.0602645898001],[132.843840144292,117.177149508315,102.618492113336,89.1678679593533,76.8252770463682,65.5907193743803,55.4641949433896,46.4457037533962,38.5352458044,31.732821096401,26.0384296293993,21.4520714033948,17.9737464183875,15.6034546743774,14.3411961713646,14.186970909349,15.1407788883306,17.2026201083095,20.3724945692856,24.6504022712589],[98.1250541984699,84.7186959724654,72.4203709874581,61.230079243448,51.1478207404352,42.1735954784196,34.3074034574013,27.5492446773801,21.8991191383562,17.3570268403295,13.9229677833001,11.5969419672679,10.3789493922329,10.2689900581951,11.2670639651546,13.3731711131113,16.5873115020653,20.9094851320164,26.3396920029648,32.8779321149104],[69.0436604148403,57.8976345988081,47.8596420237731,38.9296826897354,31.1077565966949,24.3938637446516,18.7880041336055,14.2901777635567,10.9003846345051,8.6186247464507,7.44489809939356,7.37920469333364,8.42154452827096,10.5719176042055,13.8303239211373,18.1967634790663,23.6712362779925,30.253742317916,37.9442815988367,46.7428541207546],[45.5996587934035,36.7139653873436,28.9363052222809,22.2666782982154,16.7050846151472,12.2515241730762,8.90599697200243,6.6685030119259,5.5390422928466,5.51761481476452,6.60422057767967,8.79885958159206,12.1015318265017,16.5122373124085,22.0309760393126,28.6577480072139,36.3925532161124,45.2353916660082,55.1862633569012,66.2451682887914],[27.7930493341592,21.1676883380716,15.6503605829812,11.2410660688881,7.93980479579217,5.74657676369347,4.661381972592,4.68422042248777,5.81509211338076,8.05399704527098,11.4009352181584,15.8559066320431,21.418911286925,28.0899491828042,35.8690203196806,44.7561246975541,54.751262316425,65.8544331762931,78.0656372771583,91.3848746190209],[15.6238320371077,11.2588034509924,8.00180810587427,5.85284600175341,4.81191713862979,4.87902151650339,6.05415913537422,8.33732999524228,11.7285340961076,16.2277714379701,21.8350420208298,28.5503458446868,36.373682909541,45.3050532153925,55.3444567622412,66.4918935500871,78.7473635789302,92.1108668487705,106.582403359608,122.161973111443],[9.09200690224874,6.98731072610573,5.99064779095994,6.10201809681138,7.32142164366005,9.64885843150595,13.0843284603491,17.6278317301894,23.279368241027,30.0389379928618,37.9065409856939,46.8821772195232,56.9658466943497,68.1575494101734,80.4572853669944,93.8650545648126,108.380857003628,124.004692683441,140.736561604251,158.576463766058],[8.19757392958246,8.35321016341174,9.61687963823825,11.988582354062,15.468318310883,20.0560875087012,25.7518899475166,32.5557256273293,40.4675945481391,49.4874967099463,59.6154321127506,70.8514007565522,83.195402641351,96.647437767147,111.20750613394,126.875607741731,143.651742590519,161.535910680304,180.528112011086,200.628346582865],[12.9405331191088,15.3565017629104,18.8805036477092,23.5125387735053,29.2526071402985,36.1007087480891,44.0568435968768,53.1210116866617,63.2932130174439,74.5734475892233,86.961715402,100.458016455774,115.062350750545,130.774718286313,147.595119063079,165.523553080842,184.560020339602,204.704520839359,225.957054580113,248.317621561865],[23.3208844708279,27.9971855246017,33.7815198193729,40.6738873551412,48.6742881319068,57.7827221496696,67.9991894084296,79.3236899081869,91.7562236489413,105.296790630693,119.945390853442,135.702024317188,152.566691021932,170.539390967672,189.62012415441,209.808890582145,231.105690250878,253.510523160607,277.023389311334,301.644288703058],[39.3386279847395,46.2752614484857,54.3199281532291,63.4726280989697,73.7333612857076,85.1021277134427,97.5789273821751,111.163760291905,125.856626442631,141.657525834355,158.566458467077,176.583424340795,195.708423455511,215.941455811224,237.282521407934,259.731620245641,283.288752324346,307.953917644048,333.727116204747,360.608348006443],[60.9937636608438,70.1907295345623,80.495728649278,91.908761004991,104.429826601701,118.058925439409,132.796057518113,148.641222837815,165.594421398514,183.65565320021,202.824918242904,223.102216526595,244.487548051283,266.980912816968,290.58231082365,315.29174207133,341.109206560007,368.034704289681,396.068235260353,425.209799472021],[88.2862914991408,99.7435897828316,112.30892130752,125.982286073205,140.763684079887,156.653115327567,173.650579816244,191.756077545918,210.969608516589,231.291172728258,252.720770180924,275.258400874587,298.904064809247,323.657761984905,349.51949240156,376.489256059212,404.567052957861,433.752883097507,464.046746478151,495.448643099792],[121.21621149963,134.933842193294,149.759506127954,165.693203303611,182.734933720266,200.884697377918,220.142494276567,240.508324416214,261.982187796857,284.564084418498,308.254014281137,333.051977384772,358.957973729405,385.972003315034,414.094066141661,443.324162209286,473.662291517907,505.108454067526,537.662649858142,571.324878889755],[159.783523662313,175.761486765948,192.847483110581,211.04151269621,230.343575522837,250.753671590462,272.271800899083,294.897963448702,318.632159239318,343.474388270931,369.424650543542,396.482946057149,424.649274811754,453.923636807356,484.306032043956,515.796460521552,548.394922240146,582.101417199737,616.915945400325,652.838506841911],[203.988227987188,222.226523500795,241.5728522554,262.027214251002,283.589609487602,306.260037965198,330.038499683792,354.924994643383,380.919522843971,408.022084285557,436.23267896814,465.55130689172,495.977968056297,527.512662461871,560.155390108443,593.906150996012,628.764945124578,664.731772494141,701.806633104702,739.98952695626]],"alpha":1,"sizes":[10,100],"type":"surface"},"1064b534f01.1":{"x":[5,0,-5],"y":[3,2,1],"z":[500,500,500],"alpha":1,"sizes":[10,100],"type":"scatter3d","mode":"lines"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1]},"yaxis":{"domain":[0,1]},"hovermode":"closest","showlegend":false,"legend":{"y":0.5,"yanchor":"top"}},"source":"A","config":{"modeBarButtonsToAdd":[{"name":"Collaborate","icon":{"width":1000,"ascent":500,"descent":-50,"path":"M487 375c7-10 9-23 5-36l-79-259c-3-12-11-23-22-31-11-8-22-12-35-12l-263 0c-15 0-29 5-43 15-13 10-23 23-28 37-5 13-5 25-1 37 0 0 0 3 1 7 1 5 1 8 1 11 0 2 0 4-1 6 0 3-1 5-1 6 1 2 2 4 3 6 1 2 2 4 4 6 2 3 4 5 5 7 5 7 9 16 13 26 4 10 7 19 9 26 0 2 0 5 0 9-1 4-1 6 0 8 0 2 2 5 4 8 3 3 5 5 5 7 4 6 8 15 12 26 4 11 7 19 7 26 1 1 0 4 0 9-1 4-1 7 0 8 1 2 3 5 6 8 4 4 6 6 6 7 4 5 8 13 13 24 4 11 7 20 7 28 1 1 0 4 0 7-1 3-1 6-1 7 0 2 1 4 3 6 1 1 3 4 5 6 2 3 3 5 5 6 1 2 3 5 4 9 2 3 3 7 5 10 1 3 2 6 4 10 2 4 4 7 6 9 2 3 4 5 7 7 3 2 7 3 11 3 3 0 8 0 13-1l0-1c7 2 12 2 14 2l218 0c14 0 25-5 32-16 8-10 10-23 6-37l-79-259c-7-22-13-37-20-43-7-7-19-10-37-10l-248 0c-5 0-9-2-11-5-2-3-2-7 0-12 4-13 18-20 41-20l264 0c5 0 10 2 16 5 5 3 8 6 10 11l85 282c2 5 2 10 2 17 7-3 13-7 17-13z m-304 0c-1-3-1-5 0-7 1-1 3-2 6-2l174 0c2 0 4 1 7 2 2 2 4 4 5 7l6 18c0 3 0 5-1 7-1 1-3 2-6 2l-173 0c-3 0-5-1-8-2-2-2-4-4-4-7z m-24-73c-1-3-1-5 0-7 2-2 3-2 6-2l174 0c2 0 5 0 7 2 3 2 4 4 5 7l6 18c1 2 0 5-1 6-1 2-3 3-5 3l-174 0c-3 0-5-1-7-3-3-1-4-4-5-6z"},"click":"function(gd) { \n        // is this being viewed in RStudio?\n        if (location.search == '?viewer_pane=1') {\n          alert('To learn about plotly for collaboration, visit:\\n https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html');\n        } else {\n          window.open('https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html', '_blank');\n        }\n      }"}],"cloud":false},"data":[{"colorbar":{"title":"","ticklen":2,"len":0.5,"y":1,"lenmode":"fraction","yanchor":"top"},"colorscale":[["0","rgba(68,1,84,1)"],["0.0037519046678002","rgba(68,3,85,1)"],["0.00814963010741483","rgba(69,4,87,1)"],["0.01307701194329","rgba(69,7,88,1)"],["0.0182556224288587","rgba(69,9,90,1)"],["0.0236964740838894","rgba(69,11,91,1)"],["0.0313747220948341","rgba(70,15,94,1)"],["0.0396069839781673","rgba(70,18,97,1)"],["0.0486941956727937","rgba(71,21,99,1)"],["0.0595691530415851","rgba(71,25,103,1)"],["0.0724580869514441","rgba(71,29,107,1)"],["0.0863238716896567","rgba(72,33,112,1)"],["0.104328485413184","rgba(72,38,118,1)"],["0.12263823391458","rgba(71,44,122,1)"],["0.144881150582378","rgba(70,51,125,1)"],["0.170284318670553","rgba(68,59,129,1)"],["0.197324317238781","rgba(65,67,133,1)"],["0.22958489812861","rgba(62,76,137,1)"],["0.266589894112363","rgba(58,86,139,1)"],["0.306351523744423","rgba(54,97,141,1)"],["0.353369693971342","rgba(48,109,142,1)"],["0.414063231986151","rgba(42,123,142,1)"],["0.510181171133497","rgba(36,146,139,1)"],["0.657969006786824","rgba(52,181,122,1)"],["1","rgba(253,231,37,1)"]],"showscale":true,"x":[-10,-8.94736842105263,-7.89473684210526,-6.84210526315789,-5.78947368421053,-4.73684210526316,-3.68421052631579,-2.63157894736842,-1.57894736842105,-0.526315789473685,0.526315789473683,1.57894736842105,2.63157894736842,3.68421052631579,4.73684210526316,5.78947368421053,6.84210526315789,7.89473684210526,8.94736842105263,10],"y":[-1,-0.736842105263158,-0.473684210526316,-0.210526315789474,0.0526315789473684,0.31578947368421,0.578947368421053,0.842105263157895,1.10526315789474,1.36842105263158,1.63157894736842,1.89473684210526,2.15789473684211,2.42105263157895,2.68421052631579,2.94736842105263,3.21052631578947,3.47368421052632,3.73684210526316,4],"z":[[328.092905549507,303.384885273641,279.784898238772,257.292944444901,235.909023892027,215.633136580149,196.46528250927,178.405461679387,161.453674090502,145.609919742613,130.874198635723,117.246510769829,104.726856144932,93.3152347610331,83.011646618131,73.8160917162263,65.7285700553187,58.7490816354083,52.8776264564953,48.1142045185794],[270.824550954914,248.376863089021,227.037208464124,206.805587080225,187.681998937323,169.666444035418,152.758922374511,136.9594339546,122.267978775687,108.684556837771,96.2091681408527,84.8418126849313,74.5824904700071,65.4312014960802,57.3879457631504,50.452723271218,44.6255340202827,39.9063780103447,36.2952552414039,33.7921657134603],[219.193588522514,199.006233066593,179.926910851669,161.955621877742,145.092366144812,129.33714365288,114.689954401944,101.150798392006,88.7196756230655,77.3965860951219,67.1815298081756,58.0745067622265,50.0755169572746,43.1845603933199,37.4016370703625,32.7267469884023,29.1598901474394,26.7010665474736,25.3502761885051,25.1075190705339],[173.200018252307,155.272995206358,138.454005401406,122.743048837451,108.140125514494,94.6452354325336,82.2583785915706,70.9795549916049,60.8087646326364,51.7460075146651,43.7912836376911,36.9445930017143,31.2059356067347,26.5753114527524,23.0527205397672,20.6381628677793,19.3316384367887,19.1331472467952,20.042689297799,22.0602645898001],[132.843840144292,117.177149508315,102.618492113336,89.1678679593533,76.8252770463682,65.5907193743803,55.4641949433896,46.4457037533962,38.5352458044,31.732821096401,26.0384296293993,21.4520714033948,17.9737464183875,15.6034546743774,14.3411961713646,14.186970909349,15.1407788883306,17.2026201083095,20.3724945692856,24.6504022712589],[98.1250541984699,84.7186959724654,72.4203709874581,61.230079243448,51.1478207404352,42.1735954784196,34.3074034574013,27.5492446773801,21.8991191383562,17.3570268403295,13.9229677833001,11.5969419672679,10.3789493922329,10.2689900581951,11.2670639651546,13.3731711131113,16.5873115020653,20.9094851320164,26.3396920029648,32.8779321149104],[69.0436604148403,57.8976345988081,47.8596420237731,38.9296826897354,31.1077565966949,24.3938637446516,18.7880041336055,14.2901777635567,10.9003846345051,8.6186247464507,7.44489809939356,7.37920469333364,8.42154452827096,10.5719176042055,13.8303239211373,18.1967634790663,23.6712362779925,30.253742317916,37.9442815988367,46.7428541207546],[45.5996587934035,36.7139653873436,28.9363052222809,22.2666782982154,16.7050846151472,12.2515241730762,8.90599697200243,6.6685030119259,5.5390422928466,5.51761481476452,6.60422057767967,8.79885958159206,12.1015318265017,16.5122373124085,22.0309760393126,28.6577480072139,36.3925532161124,45.2353916660082,55.1862633569012,66.2451682887914],[27.7930493341592,21.1676883380716,15.6503605829812,11.2410660688881,7.93980479579217,5.74657676369347,4.661381972592,4.68422042248777,5.81509211338076,8.05399704527098,11.4009352181584,15.8559066320431,21.418911286925,28.0899491828042,35.8690203196806,44.7561246975541,54.751262316425,65.8544331762931,78.0656372771583,91.3848746190209],[15.6238320371077,11.2588034509924,8.00180810587427,5.85284600175341,4.81191713862979,4.87902151650339,6.05415913537422,8.33732999524228,11.7285340961076,16.2277714379701,21.8350420208298,28.5503458446868,36.373682909541,45.3050532153925,55.3444567622412,66.4918935500871,78.7473635789302,92.1108668487705,106.582403359608,122.161973111443],[9.09200690224874,6.98731072610573,5.99064779095994,6.10201809681138,7.32142164366005,9.64885843150595,13.0843284603491,17.6278317301894,23.279368241027,30.0389379928618,37.9065409856939,46.8821772195232,56.9658466943497,68.1575494101734,80.4572853669944,93.8650545648126,108.380857003628,124.004692683441,140.736561604251,158.576463766058],[8.19757392958246,8.35321016341174,9.61687963823825,11.988582354062,15.468318310883,20.0560875087012,25.7518899475166,32.5557256273293,40.4675945481391,49.4874967099463,59.6154321127506,70.8514007565522,83.195402641351,96.647437767147,111.20750613394,126.875607741731,143.651742590519,161.535910680304,180.528112011086,200.628346582865],[12.9405331191088,15.3565017629104,18.8805036477092,23.5125387735053,29.2526071402985,36.1007087480891,44.0568435968768,53.1210116866617,63.2932130174439,74.5734475892233,86.961715402,100.458016455774,115.062350750545,130.774718286313,147.595119063079,165.523553080842,184.560020339602,204.704520839359,225.957054580113,248.317621561865],[23.3208844708279,27.9971855246017,33.7815198193729,40.6738873551412,48.6742881319068,57.7827221496696,67.9991894084296,79.3236899081869,91.7562236489413,105.296790630693,119.945390853442,135.702024317188,152.566691021932,170.539390967672,189.62012415441,209.808890582145,231.105690250878,253.510523160607,277.023389311334,301.644288703058],[39.3386279847395,46.2752614484857,54.3199281532291,63.4726280989697,73.7333612857076,85.1021277134427,97.5789273821751,111.163760291905,125.856626442631,141.657525834355,158.566458467077,176.583424340795,195.708423455511,215.941455811224,237.282521407934,259.731620245641,283.288752324346,307.953917644048,333.727116204747,360.608348006443],[60.9937636608438,70.1907295345623,80.495728649278,91.908761004991,104.429826601701,118.058925439409,132.796057518113,148.641222837815,165.594421398514,183.65565320021,202.824918242904,223.102216526595,244.487548051283,266.980912816968,290.58231082365,315.29174207133,341.109206560007,368.034704289681,396.068235260353,425.209799472021],[88.2862914991408,99.7435897828316,112.30892130752,125.982286073205,140.763684079887,156.653115327567,173.650579816244,191.756077545918,210.969608516589,231.291172728258,252.720770180924,275.258400874587,298.904064809247,323.657761984905,349.51949240156,376.489256059212,404.567052957861,433.752883097507,464.046746478151,495.448643099792],[121.21621149963,134.933842193294,149.759506127954,165.693203303611,182.734933720266,200.884697377918,220.142494276567,240.508324416214,261.982187796857,284.564084418498,308.254014281137,333.051977384772,358.957973729405,385.972003315034,414.094066141661,443.324162209286,473.662291517907,505.108454067526,537.662649858142,571.324878889755],[159.783523662313,175.761486765948,192.847483110581,211.04151269621,230.343575522837,250.753671590462,272.271800899083,294.897963448702,318.632159239318,343.474388270931,369.424650543542,396.482946057149,424.649274811754,453.923636807356,484.306032043956,515.796460521552,548.394922240146,582.101417199737,616.915945400325,652.838506841911],[203.988227987188,222.226523500795,241.5728522554,262.027214251002,283.589609487602,306.260037965198,330.038499683792,354.924994643383,380.919522843971,408.022084285557,436.23267896814,465.55130689172,495.977968056297,527.512662461871,560.155390108443,593.906150996012,628.764945124578,664.731772494141,701.806633104702,739.98952695626]],"type":"surface","frame":null},{"x":[5,0,-5],"y":[3,2,1],"z":[500,500,500],"type":"scatter3d","mode":"lines","line":{"fillcolor":"rgba(255,127,14,1)","color":"rgba(255,127,14,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1}},"base_url":"https://plot.ly"},"evals":["config.modeBarButtonsToAdd.0.click"],"jsHooks":{"render":[{"code":"function(el, x) { var ctConfig = crosstalk.var('plotlyCrosstalkOpts').set({\"on\":\"plotly_click\",\"persistent\":false,\"dynamic\":false,\"selectize\":false,\"opacityDim\":0.2,\"selected\":{\"opacity\":1}}); }","data":null}]}}</script>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># contour(x=theta0s, y=theta1s, z=cost, levels=c(5,7,10,20,30,40,50,100,200,300))</span>
+theta1s =<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from=</span><span class="op">-</span><span class="dv">1</span>,<span class="dt">to=</span><span class="dv">4</span>,<span class="dt">length.out=</span><span class="dv">20</span>)
+theta0s =<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from=</span><span class="op">-</span><span class="dv">10</span>,<span class="dt">to=</span><span class="dv">10</span>, <span class="dt">length.out=</span><span class="dv">20</span>)
+
+cost=<span class="kw">rbind</span>()
+<span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>) {
+  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>) {
+    cost=<span class="kw">rbind</span>(cost, <span class="kw">c</span>(theta0s[i], theta1s[j], <span class="kw">J</span>(X, y, <span class="kw">rbind</span>(theta0s[i], theta1s[j]))))
+  }
+}
+<span class="kw">colnames</span>(cost)=<span class="kw">c</span>(<span class="st">&quot;Th0&quot;</span>,<span class="st">&quot;Th1&quot;</span>,<span class="st">&quot;J&quot;</span>)
+
+<span class="kw">ggplot</span>(<span class="kw">as.data.frame</span>(cost), <span class="kw">aes</span>(Th0, Th1, <span class="dt">z=</span>J)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_contour</span>(<span class="kw">aes</span>(<span class="dt">color=</span>..level..), <span class="dt">binwidth=</span><span class="dv">10</span>)</code></pre></div>
+<p><img src="_main_files/figure-html/cost2dimcontour-1.png" width="672" /></p>
+<div id="delta-theta" class="section level3">
+<h3><span class="header-section-number">2.3.1</span> Delta theta</h3>
+<p>Delta theta is calculated from the partial derivative of the cost function</p>
+<p><span class="math display">\[\theta_j\ =\ \theta_j\ -\ \alpha\cdot\frac{\partial}{\partial\theta_j}J\left(\theta_0,\theta_1\right)\]</span></p>
+<p>The partial derivative can be calculated</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{\partial}{\partial\theta_j}J\left(\theta\right)\ &amp;= \frac{\partial}{\partial\theta_j}\cdot\frac{1}{2}\cdot\left(h_{\theta}\left(x\right)-y\right)^2 \\
+&amp;= \frac{1}{2}\cdot\left(h_{\theta}\left(x\right)-y\right)\cdot\frac{\partial}{\partial\theta_j}\left(h_{\theta}\left(x\right)-y\right) \\
+&amp;= \frac{1}{2}\cdot\left(h_{\theta}\left(x\right)-y\right)\cdot\frac{\partial}{\partial\theta_j}\left(h_{\theta}\left(x\right)-y\right) \\
+&amp;= \left(h_{\theta}\left(x\right)-y\right)\cdot\frac{\partial}{\partial\theta_j}\left(\sum_{_{i=1}}^n\theta_i\cdot x_i-y\right) \\
+&amp;= \left(h_{\theta}\left(x\right)-y\right)\cdot x_j
+\end{align}
+\]</span></p>
+<p>Thus the delta equations using the solved partial derivative are</p>
+<p><span class="math display">\[ \theta_{0\ }:=\theta_0-\alpha\cdot\frac{1}{m}\cdot\sum_{_{i=1}}^m\left(h_{\theta}\left(x_i\right)-y_i\right)\]</span> Because <span class="math inline">\(x_i\)</span> is 1 for <span class="math inline">\(\theta_0\)</span></p>
+<p><span class="math display">\[\theta_1:=\theta_1-\alpha\cdot\frac{1}{m}\cdot\sum_{_{i=1}}^m\left(\left(h_{\theta}\left(x_i\right)-y_i\right)\cdot x_i\right)\]</span></p>
+</div>
+<div id="code" class="section level3">
+<h3><span class="header-section-number">2.3.2</span> Code</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">gradientDescent =<span class="st"> </span><span class="cf">function</span>(X, y, <span class="dt">theta=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>), <span class="dt">alpha=</span><span class="fl">0.01</span>, <span class="dt">num_iters=</span><span class="dv">1500</span>) {
+  m =<span class="st"> </span><span class="kw">length</span>(y)
+  J_history =<span class="st"> </span><span class="kw">rep</span>(<span class="dv">0</span>, num_iters<span class="op">+</span><span class="dv">1</span>)
+  theta_history =<span class="st"> </span><span class="kw">matrix</span>(<span class="dt">nrow=</span>num_iters<span class="op">+</span><span class="dv">1</span>, <span class="dt">ncol=</span><span class="dv">2</span>)
+  
+  J_history[<span class="dv">1</span>] =<span class="st"> </span><span class="kw">J</span>(X, y, theta)
+  theta_history[<span class="dv">1</span>, ] =<span class="st"> </span><span class="kw">t</span>(theta)
+  
+  <span class="cf">for</span> (iter <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>num_iters) {
+    delta0 =<span class="st"> </span>alpha <span class="op">*</span><span class="st"> </span>(<span class="dv">1</span><span class="op">/</span>m) <span class="op">*</span><span class="st"> </span><span class="kw">sum</span>(((X <span class="op">%*%</span><span class="st"> </span>theta) <span class="op">-</span><span class="st"> </span>y) <span class="op">*</span><span class="st"> </span>X[,<span class="dv">1</span>])
+    delta1 =<span class="st"> </span>alpha <span class="op">*</span><span class="st"> </span>(<span class="dv">1</span><span class="op">/</span>m) <span class="op">*</span><span class="st"> </span><span class="kw">sum</span>(((X <span class="op">%*%</span><span class="st"> </span>theta) <span class="op">-</span><span class="st"> </span>y) <span class="op">*</span><span class="st"> </span>X[,<span class="dv">2</span>])
+    theta =<span class="st"> </span>theta <span class="op">-</span><span class="st"> </span><span class="kw">rbind</span>(delta0, delta1)
+    J_history[iter<span class="op">+</span><span class="dv">1</span>] =<span class="st"> </span><span class="kw">J</span>(X, y, theta)
+    theta_history[iter<span class="op">+</span><span class="dv">1</span>, ] =<span class="st"> </span><span class="kw">t</span>(theta)
+  }
+  
+  <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">theta=</span>theta, <span class="dt">theta_history =</span> theta_history, <span class="dt">J_history=</span>J_history))
+}</code></pre></div>
+</div>
+</div>
+<div id="demo" class="section level2">
+<h2><span class="header-section-number">2.4</span> Demo</h2>
+<pre><code>## PhantomJS not found. You can install it with webshot::install_phantomjs(). If it is installed, please make sure the phantomjs executable can be found via the PATH variable.</code></pre>
+<div style="width: 100% ; height: 500px ; text-align: center; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;" class="muted well">Shiny applications not supported in static R Markdown documents</div>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="multiple-linear-regression.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"google": false,
+"weibo": false,
+"instapper": false,
+"vk": false,
+"all": ["facebook", "google", "twitter", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"download": null,
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:" && /^https?:/.test(script.src))
+      script.src  = script.src.replace(/^https?:/, '');
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

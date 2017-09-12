@@ -1,0 +1,74 @@
+---
+title: "Logistic Regression"
+output: html_document
+runtime: shiny
+---
+
+# Logistic Regression
+
+```{r }
+library(ggplot2)
+library(latex2exp)
+library(shiny)
+library(dplyr)
+ex1data2 = as.matrix(read.csv("ex2/ex2data1.txt", header=FALSE))
+# m=nrow(ex1data2)
+# X = cbind(rep(1, m), ex1data2[, 1:2])
+# colnames(X) = c("x0","x1","x2")
+# y = ex1data2[,3]
+# theta=rep(0, ncol(X))
+```
+
+
+## Model representation
+
+$$\begin{align*}& h_\theta (x) = g ( \theta^T x ) \newline \newline& z = \theta^T x \newline& g(z) = \dfrac{1}{1 + e^{-z}}\end{align*}$$
+## Sigmoid Function
+
+```{r}
+data.frame(x=seq(from=-5, to=5, by=0.1)) %>% 
+  mutate(y=1/(1+exp(-x))) %>% 
+  ggplot(aes(x,y)) + geom_line() + geom_vline(xintercept = 0, linetype=2)
+```
+
+## Cost
+
+```{r costFunction.m}
+J = function(X,y,theta) {
+  m=length(y)
+  ho = X %*% theta
+  return(1/(2*m) * sum((ho-y)^2))
+}
+```
+
+
+## Gradient Descent
+
+```{r gradientDesc.m}
+gradientDescent = function(X, y, theta=rep(0, ncol(X)), alpha=0.01, num_iters=1500) {
+  m = length(y)
+  J_history = rep(0, num_iters+1)
+  theta_history = matrix(nrow=num_iters+1, ncol=ncol(X))
+  
+  J_history[1] = J(X, y, theta)
+  theta_history[1, ] = theta
+  
+  for (iter in 1:num_iters) {
+    deltas = apply(X,2, function(xi) { # where xi is the ith feature of X
+      alpha * (1/m) * sum(((X %*% theta) - y) * xi)
+    })
+    theta = theta - deltas
+    J_history[iter+1] = J(X, y, theta)
+    theta_history[iter+1, ] = theta
+  }
+  
+  return(list(theta=theta, theta_history = theta_history, J_history=J_history))
+}
+```
+
+## Demo
+
+```{r, echo = FALSE}
+```
+
+

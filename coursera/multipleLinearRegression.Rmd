@@ -1,0 +1,135 @@
+---
+title: "Multiple Linear Regression"
+output: html_document
+runtime: shiny
+---
+
+# Multiple Linear Regression
+
+```{r }
+library(ggplot2)
+library(latex2exp)
+library(shiny)
+ex1data2 = as.matrix(read.csv("ex1/ex1data2.txt", header=FALSE))
+m=nrow(ex1data2)
+X = cbind(rep(1, m), ex1data2[, 1:2])
+colnames(X) = c("x0","x1","x2")
+y = ex1data2[,3]
+theta=rep(0, ncol(X))
+```
+
+
+## Model representation
+
+$$h_{\theta}\left(x\right)\ =\ \theta_0+\theta_1 x_1 +\theta_2 x_2$$
+## Normalization
+
+$$ \frac{x_i - u_i}{s_i}$$
+
+```{r}
+X[,2:3]=apply(X[,2:3], 2, function(x) (x-mean(x))/sd(x))
+```
+
+## Cost
+
+```{r costFunction.m}
+J = function(X,y,theta) {
+  m=length(y)
+  ho = X %*% theta
+  return(1/(2*m) * sum((ho-y)^2))
+}
+```
+
+
+## Gradient Descent
+
+```{r gradientDesc.m}
+gradientDescent = function(X, y, theta=rep(0, ncol(X)), alpha=0.01, num_iters=1500) {
+  m = length(y)
+  J_history = rep(0, num_iters+1)
+  theta_history = matrix(nrow=num_iters+1, ncol=ncol(X))
+  
+  J_history[1] = J(X, y, theta)
+  theta_history[1, ] = theta
+  
+  for (iter in 1:num_iters) {
+    deltas = apply(X,2, function(xi) { # where xi is the ith feature of X
+      alpha * (1/m) * sum(((X %*% theta) - y) * xi)
+    })
+    theta = theta - deltas
+    J_history[iter+1] = J(X, y, theta)
+    theta_history[iter+1, ] = theta
+  }
+  
+  return(list(theta=theta, theta_history = theta_history, J_history=J_history))
+}
+```
+
+## Demo
+
+```{r, echo = FALSE}
+
+shinyApp(
+  
+  ui = fluidPage(
+    inputPanel(
+      numericInput("num_iters", "Num Iterations", 1500, min=10, max=10000, step=100),
+      numericInput("alpha", "Alpha", 0.01, min=0, max=1.0, step=0.1),
+      sliderInput("cur_iter", "Iteration", value=1, min=1, max=10000, animate=animationOptions(interval=200, loop=T))
+    ),
+    fluidRow(
+      column(width=4, plotOutput("thetaCostPlot")),
+      column(width=4, plotOutput("regressionPlot")),
+      column(width=4, plotOutput("costPlot"))
+    )
+  ),
+  
+  server = function(session, input, output) {
+    observe({
+      updateSliderInput(session, "cur_iter", max=input$num_iters+1)
+    })
+    
+    solve_theta = reactive({
+      gradientDescent(X,y,theta=c(0,0),alpha=input$alpha,num_iters=input$num_iters)
+    })
+    
+    output$thetaCostPlot = renderPlot({
+      theta0s = seq(from=min(solve_theta()$theta_history[,1]), to = max(solve_theta()$theta_history[,1]), length.out=20)
+      theta1s = seq(from=min(solve_theta()$theta_history[,2]), to = max(solve_theta()$theta_history[,2]), length.out=20)
+      
+      cost=data.frame()
+      for (i in 1:20) {
+        for (j in 1:20) {
+          cost = rbind(cost, c(theta0s[i],theta1s[j],J(X, y, rbind(theta0s[i], theta1s[j]))))
+        }
+      }
+      colnames(cost) = c("Th0","Th1","J")
+      
+      thetahx = as.data.frame(solve_theta()$theta_history[1:max(input$cur_iter,5), ])
+      colnames(thetahx) = c("Th0","Th1")
+      
+      ggplot() +
+        geom_contour(data=cost, aes(Th0, Th1, z=J, color=..level..), binwidth=1) +
+        geom_line(data=thetahx, aes(Th0, Th1))
+      
+    })
+    
+    output$costPlot = renderPlot({
+      qplot(x=1:(input$num_iters+1),y=solve_theta()$J_history) + geom_line() + xlab("Iteration") + ylab("J (cost)") +
+        geom_vline(xintercept = input$cur_iter)
+    })
+    
+    output$regressionPlot <- renderPlot({
+      ggplot(ex1data1, aes(x=X, y=y)) + 
+        geom_point() +
+        xlim(0,NA) +
+        geom_smooth(method="lm", se=F, fullrange=T) +
+        geom_abline(intercept=solve_theta()$theta_history[input$cur_iter, 1], slope=solve_theta()$theta_history[input$cur_iter,2])
+    })
+  },
+  
+  options = list(height = 500)
+)
+```
+
+
