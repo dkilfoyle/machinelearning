@@ -1,3 +1,35 @@
+--- 
+title: "Machine Learning"
+site: bookdown::bookdown_site
+output: bookdown::gitbook
+documentclass: book
+---
+
+# Introduction
+
+<!--chapter:end:index.Rmd-->
+
+
+# Linear Regression
+## Model representation
+## Cost Function
+## Gradient Descent
+### Delta theta
+### Code
+## Demo
+
+<!--chapter:end:linearRegression.Rmd-->
+
+
+# Multiple Linear Regression
+## Model representation
+## Normalization
+## Cost
+## Gradient Descent
+## Demo
+
+<!--chapter:end:multipleLinearRegression.Rmd-->
+
 ---
 title: "Logistic Regression"
 output: html_document
@@ -214,4 +246,7 @@ ggplot(ex2data1, aes(x=V1, y=V2)) +
   theme(legend.position = "none")
 
 ```
+
+
+<!--chapter:end:logisticRegression.Rmd-->
 
