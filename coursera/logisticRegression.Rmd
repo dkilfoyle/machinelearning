@@ -1,6 +1,7 @@
 ---
 title: "Logistic Regression"
-output: html_document
+output:  html_document
+runtime: shiny
 ---
 
 # Logistic Regression
@@ -177,19 +178,17 @@ gradientr = function(theta,X,y,lambda=3) {
 gradientDescentReg = function(X, y, theta=rep(0, ncol(X)), alpha=0.1, lambda=3, num_iters=4000) {
   m = length(y)
   J_history = rep(0, num_iters+1)
-  theta_history = matrix(nrow=num_iters+1, ncol=ncol(X))
-  
   J_history[1] = costr(theta, X, y, lambda)
-  theta_history[1, ] = theta
   
   for (iter in 1:num_iters) {
     deltas = alpha * gradientr(theta, X, y, lambda)
     theta = theta - deltas
     J_history[iter+1] = costr(theta, X, y, lambda)
-    theta_history[iter+1, ] = theta
   }
   
-  return(list(theta=theta, theta_history = theta_history, J_history=J_history))
+  J_history[is.nan(J_history)] = NA
+  
+  return(list(theta=theta, J_history=J_history))
 }
 ```
 
@@ -213,5 +212,66 @@ ggplot(ex2data1, aes(x=V1, y=V2)) +
   geom_contour(data=dbgrid, aes(x=x,y=y,z=pr), breaks=c(0,0.5)) +
   theme(legend.position = "none")
 
+```
+
+```{r}
+shinyApp(
+  
+  ui = fluidPage(
+    inputPanel(
+      numericInput("num_iters", "Num Iterations", 400, min=10, max=10000, step=100),
+      numericInput("alpha", "Alpha", 0.1, min=0, max=1.0, step=0.1),
+      numericInput("lambda", "Lambda",0, min=0, max=1000, step=1)
+    ),
+    fluidRow(
+      column(width=4, plotOutput("costPlot")),
+      column(width=4, plotOutput("boundaryPlot")),
+      column(width=4, 
+        h4("Gradient Descent Theta"),
+        textOutput("gdresults"),
+        h4("Optim Theta"),
+        textOutput("optimresults"))
+    )
+  ),
+  
+  server = function(session, input, output) {
+    
+    solve_theta = reactive({
+      gradientDescentReg(X, y, theta=c(0,0,0), alpha=input$alpha, lambda=input$lambda, num_iters=input$num_iters)
+    })
+    
+    output$costPlot = renderPlot({
+      mylr = solve_theta()
+      ggplot(data.frame(x=1:length(mylr$J_history), y=mylr$J_history)) +
+        geom_point(aes(x, y))
+      
+    })
+    
+    output$boundaryPlot <- renderPlot({
+      optimlr = optim(c(0,0,0), costr, gradientr, X, y)$par
+      mylr=solve_theta()$theta
+      
+      dbgrid = expand.grid(x=20:100, y=20:100)
+      dbgrid$optimpr = apply(dbgrid, 1, function(x) predictlr(optimlr, cbind(1, x[1], x[2])))
+      dbgrid$gdpr = apply(dbgrid, 1, function(x) predictlr(mylr, cbind(1, x[1], x[2])))
+      
+      ggplot(ex2data1, aes(x=V1, y=V2)) + 
+        geom_point(size=3, aes(pch=as.factor(V3), col=as.factor(V3))) +
+        geom_contour(data=dbgrid, aes(x=x,y=y,z=optimpr), breaks=c(0,0.5)) +
+        geom_contour(data=dbgrid, aes(x=x,y=y,z=gdpr), breaks=c(0,0.5)) +
+        theme(legend.position = "none")
+    })
+    
+    output$gdresults = renderText({
+      solve_theta()$theta
+    })
+    
+    output$optimresults = renderText({
+      optim(c(0,0,0), costr, gradientr, X, y)$par
+    })
+  },
+  
+  options = list(height = 500)
+)
 ```
 
