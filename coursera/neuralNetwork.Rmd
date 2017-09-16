@@ -1,0 +1,122 @@
+---
+title: "neuralNetwork"
+author: "Dean Kilfoyle"
+date: "16 September 2017"
+output: html_document
+---
+
+# Neural Network
+
+```{r}
+library(ggplot2)
+library(latex2exp)
+library(shiny)
+library(dplyr)
+```
+
+
+##  Model Representation
+
+![neuralnetwork.png](neuralnetwork.png)
+
+## Exercise
+
+```{r, echo = FALSE}
+library(R.matlab)
+ex3data1 = readMat("ex3/ex3data1.mat")
+```
+
+```{r}
+df = expand.grid(r=1:20,c=1:20)
+df$z = ex3data1$X[2500,]
+ggplot(df, aes(c,-r,fill=z)) + geom_raster()+ coord_fixed()
+```
+
+```{r}
+g = function(z) {
+  1 / (1 + exp(-z))
+}
+costr = function(theta,X,y,lambda=3) {
+  m=length(y)
+  z = X %*% theta
+  h = g(z)
+  cost = 1/m * (t(-y) %*% log(h) - (t(1-y) %*% log(1-h)))
+  theta[1] = 0 # dont't penalty the bias theta
+  cost = cost + lambda/(2*m) * sum(theta^2)
+  return(cost)
+}
+gradientr = function(theta,X,y,lambda=3) {
+  m=length(y)
+  gradient = 1/m * t(X) %*% (g(X %*% theta) - y)
+  theta[1] = 0 # don't include penalty term for bias theta
+  gradient = gradient + (lambda / m) * theta
+  return(gradient)
+}
+predictlr = function(theta, X) g(X %*% theta)
+```
+
+```{r}
+theta_t = c(-2, -1, 1, 2)
+X_t = cbind(rep(1,5), matrix(1:15,nrow=5)/10)
+y_t = c(1,0,1,0,1)
+lambda_t = 3
+costr(theta_t, X_t, y_t, lambda_t)
+```
+
+```{r}
+gradientr(theta_t, X_t, y_t, lambda_t)
+```
+
+```{r}
+lambda = 0.1
+m = nrow(ex3data1$X)
+n = ncol(ex3data1$X)
+num_labels = 10
+
+oneVsAll = function(X, y, num_labels, lambda) {
+  
+  thetas = matrix(0, nrow=num_labels, ncol=n+1)
+  X = cbind(rep(1,m), X) # add a column of 1s for X_0
+  initial_theta = rep(0, n+1)
+  
+  for (i in 1:num_labels) {
+    # train y=i vs not i
+    y_t = matrix(as.integer(y==i),ncol=1)
+    thetas[i, ] = optim(initial_theta, 
+      costr, 
+      gradientr, 
+      X,
+      y_t,
+      lambda,
+      method="BFGS", 
+      control=list(maxit=50))$par
+  }
+  
+  return(thetas)
+}
+  
+thetas = oneVsAll(ex3data1$X, ex3data1$y, num_labels, lambda)
+```
+
+```{r}
+predictOneVsAll = function(thetas, X) {
+  m = nrow(X) #5000
+  num_labels = nrow(thetas) #10
+
+  X = cbind(rep(1,m), X) # add a column of 1s for X_0
+  
+  #t(thetas) = 
+  # 1 2 3 4 5 6 7 8 9 10
+  # . . . . . . . . . . 
+  # . . . . . . . . . . 
+  # 400
+  
+  p = g(X %*% t(thetas)) 
+  # each column of p is the predicted probability that y=1 for that column for each row of X
+  
+  return(apply(p, 1, which.max))
+}
+p = predictOneVsAll(thetas, ex3data1$X)
+mean(p==ex3data1$y)
+```
+

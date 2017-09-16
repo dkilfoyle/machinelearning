@@ -1,1 +1,3 @@
-rmd_files: ["index.Rmd", "linearRegression.Rmd", "multipleLinearRegression.Rmd", "logisticRegression.Rmd"]
+rmd_files: ["index.Rmd", "linearRegression.Rmd", "multipleLinearRegression.Rmd", "logisticRegression.Rmd", "neuralNetwork.Rmd"]
+delete_merged_file: true
+

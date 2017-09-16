@@ -32,7 +32,7 @@ X[,2:3]=apply(X[,2:3], 2, function(x) (x-mean(x))/sd(x))
 
 ## Cost
 
-```{r costFunction.m}
+```{r }
 J = function(X,y,theta) {
   m=length(y)
   ho = X %*% theta
@@ -43,7 +43,7 @@ J = function(X,y,theta) {
 
 ## Gradient Descent
 
-```{r gradientDesc.m}
+```{r }
 gradientDescent = function(X, y, theta=rep(0, ncol(X)), alpha=0.01, num_iters=1500) {
   m = length(y)
   J_history = rep(0, num_iters+1)

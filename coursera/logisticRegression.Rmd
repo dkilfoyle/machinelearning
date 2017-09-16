@@ -160,7 +160,6 @@ costr = function(theta,X,y,lambda=3) {
   z = X %*% theta
   h = g(z)
   cost = 1/m * (t(-y) %*% log(h) - (t(1-y) %*% log(1-h)))
-  theta = theta^2
   theta[1] = 0 # dont't penalty the bias theta
   cost = cost + lambda/(2*m) * sum(theta^2)
   return(cost)
@@ -202,7 +201,7 @@ predictlr = function(theta, X) g(X %*% theta)
 
 ```{r}
 # mylr=gradientDescentReg(X,y)
-mylr=optim(c(0,0,0), costr, gradientr, X, y)$par
+mylr=optim(c(0,0,0), costr, gradientr, X, y, method="BFGS")$par
 
 dbgrid = expand.grid(x=20:100, y=20:100)
 dbgrid$pr = apply(dbgrid, 1, function(x) predictlr(mylr, cbind(1, x[1], x[2])))

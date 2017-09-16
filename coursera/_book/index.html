@@ -22,8 +22,10 @@
   
   
 
+<meta name="author" content="Dean Kilfoyle">
 
 
+<meta name="date" content="2017-09-16">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -92,7 +94,6 @@ code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* Com
 code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
 </style>
 
-<link rel="stylesheet" href="style.css" type="text/css" />
 </head>
 
 <body>
@@ -105,9 +106,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
       <nav role="navigation">
 
 <ul class="summary">
-<li><a href="./">A Minimal Book Example</a></li>
-
-<li class="divider"></li>
 <li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a></li>
 <li class="chapter" data-level="2" data-path="linear-regression.html"><a href="linear-regression.html"><i class="fa fa-check"></i><b>2</b> Linear Regression</a><ul>
 <li class="chapter" data-level="2.1" data-path="linear-regression.html"><a href="linear-regression.html#model-representation"><i class="fa fa-check"></i><b>2.1</b> Model representation</a></li>
@@ -124,8 +122,24 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="3.3" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#gradient-descent-1"><i class="fa fa-check"></i><b>3.3</b> Gradient Descent</a></li>
 <li class="chapter" data-level="3.4" data-path="multiple-linear-regression.html"><a href="multiple-linear-regression.html#demo-1"><i class="fa fa-check"></i><b>3.4</b> Demo</a></li>
 </ul></li>
-<li class="divider"></li>
-<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+<li class="chapter" data-level="4" data-path="logistic-regression.html"><a href="logistic-regression.html"><i class="fa fa-check"></i><b>4</b> Logistic Regression</a><ul>
+<li class="chapter" data-level="4.1" data-path="logistic-regression.html"><a href="logistic-regression.html#model-representation-2"><i class="fa fa-check"></i><b>4.1</b> Model representation</a></li>
+<li class="chapter" data-level="4.2" data-path="logistic-regression.html"><a href="logistic-regression.html#cost-1"><i class="fa fa-check"></i><b>4.2</b> Cost</a><ul>
+<li class="chapter" data-level="4.2.1" data-path="logistic-regression.html"><a href="logistic-regression.html#gradient-of-cost-function"><i class="fa fa-check"></i><b>4.2.1</b> Gradient of Cost Function</a></li>
+<li class="chapter" data-level="4.2.2" data-path="logistic-regression.html"><a href="logistic-regression.html#vectorized"><i class="fa fa-check"></i><b>4.2.2</b> Vectorized</a></li>
+</ul></li>
+<li class="chapter" data-level="4.3" data-path="logistic-regression.html"><a href="logistic-regression.html#gradient-descent-2"><i class="fa fa-check"></i><b>4.3</b> Gradient Descent</a></li>
+<li class="chapter" data-level="4.4" data-path="logistic-regression.html"><a href="logistic-regression.html#exercise"><i class="fa fa-check"></i><b>4.4</b> Exercise</a></li>
+<li class="chapter" data-level="4.5" data-path="logistic-regression.html"><a href="logistic-regression.html#optimised-version"><i class="fa fa-check"></i><b>4.5</b> Optimised version</a></li>
+<li class="chapter" data-level="4.6" data-path="logistic-regression.html"><a href="logistic-regression.html#regularisation"><i class="fa fa-check"></i><b>4.6</b> Regularisation</a></li>
+<li class="chapter" data-level="4.7" data-path="logistic-regression.html"><a href="logistic-regression.html#prediction"><i class="fa fa-check"></i><b>4.7</b> Prediction</a><ul>
+<li class="chapter" data-level="4.7.1" data-path="logistic-regression.html"><a href="logistic-regression.html#decision-boundary"><i class="fa fa-check"></i><b>4.7.1</b> Decision Boundary</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="neural-network.html"><a href="neural-network.html"><i class="fa fa-check"></i><b>5</b> Neural Network</a><ul>
+<li class="chapter" data-level="5.1" data-path="neural-network.html"><a href="neural-network.html#model-representation-3"><i class="fa fa-check"></i><b>5.1</b> Model Representation</a></li>
+<li class="chapter" data-level="5.2" data-path="neural-network.html"><a href="neural-network.html#exercise-1"><i class="fa fa-check"></i><b>5.2</b> Exercise</a></li>
+</ul></li>
 </ul>
 
       </nav>
@@ -145,6 +159,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
             <section class="normal" id="section-">
 <div id="header">
 <h1 class="title">Machine Learning</h1>
+<h4 class="author"><em>Dean Kilfoyle</em></h4>
+<h4 class="date"><em>16 September 2017</em></h4>
 </div>
 <div id="introduction" class="section level1">
 <h1><span class="header-section-number">1</span> Introduction</h1>
@@ -189,7 +205,7 @@ gitbook.start({
 "link": null,
 "text": null
 },
-"download": null,
+"download": ["_main.epub"],
 "toc": {
 "collapse": "subsection"
 }
