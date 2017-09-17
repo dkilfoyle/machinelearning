@@ -5,6 +5,4 @@ output: bookdown::gitbook
 documentclass: book
 ---
 
-# Introduction
 
-Hello

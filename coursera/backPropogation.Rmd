@@ -1,0 +1,196 @@
+---
+title: "Back Propogation"
+author: "Dean Kilfoyle"
+date: "16 September 2017"
+output: html_document
+---
+
+# Back Propogation
+
+```{r}
+library(ggplot2)
+library(latex2exp)
+library(shiny)
+library(dplyr)
+```
+
+## Cost Function
+
+$$\begin{gather*} J(\Theta) = - \frac{1}{m} \sum_{i=1}^m \sum_{k=1}^K \left[y^{(i)}_k \log ((h_\Theta (x^{(i)}))_k) + (1 - y^{(i)}_k)\log (1 - (h_\Theta(x^{(i)}))_k)\right] + \frac{\lambda}{2m}\sum_{l=1}^{L-1} \sum_{i=1}^{s_l} \sum_{j=1}^{s_{l+1}} ( \Theta_{j,i}^{(l)})^2\end{gather*}$$
+Where:
+K is the number of output classes
+m is the number of data samples in X
+L is the number of layers
+s_l is the number of units in layer l exluding the bias
+
+```{r}
+g = function(z) { 1 / (1 + exp(-z)) }
+
+nnCost = function(thetas, input_layer_size, hidden_layer_size, num_labels, X, y, lambda=0) {
+  
+  # Reshape the unrolled thetas into the weight matrices
+  theta1_size = hidden_layer_size * (input_layer_size + 1)
+  theta1 = matrix(thetas[1:theta1_size], nrow=hidden_layer_size, ncol=(input_layer_size+1))
+  theta2 = matrix(thetas[(theta1_size+1):length(thetas)], nrow=num_labels, ncol=(hidden_layer_size+1))
+
+  # Setup some useful variables
+  m = nrow(X)
+  n = ncol(X)
+  
+  # Add a column of 1s to X for x_0
+  X = cbind(rep(1,m),X)
+         
+  J = 0
+  theta1_grad = matrix(0, nrow=nrow(theta1), ncol=ncol(theta1))
+  theta2_grad = matrix(0, nrow=nrow(theta2), ncol=ncol(theta2))
+  
+  for (i in 1:m) {
+    y_k = diag(num_labels)[y[i],]   # eg y=3 = c(0,0,1,0,0,0,0,0,0,0)
+  
+    a2 = g(theta1 %*% X[i, ]) # input to hidden
+    h = g(theta2 %*% rbind(1,a2)) # hidden to output
+    
+    # vectorise the sum over k labels
+    cost = 1/m * (t(-y_k) %*% log(h) - (t(1-y_k) %*% log(1-h)))
+    J = J + cost 
+  }
+  
+  penalty = (lambda / (2 * m)) * (sum(theta1[,-1]^2) + sum(theta2[,-1]^2))
+  J = J + penalty
+  
+  return(J)
+}
+```
+
+## Sigmoid gradient
+
+Gradient = derivative of the sigmoid function with respect to z
+
+$$g'(z) = \frac{d}{dz}g(z) = g(z) (1-g(z))$$
+and g(z) = a
+
+$$g'(z^{(l)}) = a^{(l)}\ .*\ (1 - a^{(l)})$$
+```{r}
+dgdz = function (z) {
+  return (g(z)*(1-g(z)))
+}
+```
+
+## Exercise
+
+```{r, echo = FALSE}
+library(R.matlab)
+ex4data1 = readMat("ex4/ex4data1.mat")
+ex4weights = readMat("ex4/ex4weights.mat")
+```
+
+```{r}
+df = expand.grid(r=1:20,c=1:20)
+df$z = ex4data1$X[2500,]
+ggplot(df, aes(c,-r,fill=z)) + geom_raster()+ coord_fixed()
+```
+
+
+```{r}
+input_layer_size  = 400  # 20x20 Input Images of Digits
+hidden_layer_size = 25   # 25 hidden units
+num_labels = 10
+nn_params = c(as.vector(ex4weights$Theta1), as.vector(ex4weights$Theta2))
+nnCost(nn_params, input_layer_size, hidden_layer_size, num_labels, ex4data1$X, ex4data1$y)
+```
+
+```{r}
+nnCost(nn_params, input_layer_size, hidden_layer_size, num_labels, ex4data1$X, ex4data1$y, lambda=1)
+```
+
+
+
+
+```{r}
+g = function(z) {
+  1 / (1 + exp(-z))
+}
+costr = function(theta,X,y,lambda=3) {
+  m=length(y)
+  z = X %*% theta
+  h = g(z)
+  cost = 1/m * (t(-y) %*% log(h) - (t(1-y) %*% log(1-h)))
+  theta[1] = 0 # dont't penalty the bias theta
+  cost = cost + lambda/(2*m) * sum(theta^2)
+  return(cost)
+}
+gradientr = function(theta,X,y,lambda=3) {
+  m=length(y)
+  gradient = 1/m * t(X) %*% (g(X %*% theta) - y)
+  theta[1] = 0 # don't include penalty term for bias theta
+  gradient = gradient + (lambda / m) * theta
+  return(gradient)
+}
+predictlr = function(theta, X) g(X %*% theta)
+```
+
+```{r}
+theta_t = c(-2, -1, 1, 2)
+X_t = cbind(rep(1,5), matrix(1:15,nrow=5)/10)
+y_t = c(1,0,1,0,1)
+lambda_t = 3
+costr(theta_t, X_t, y_t, lambda_t)
+```
+
+```{r}
+gradientr(theta_t, X_t, y_t, lambda_t)
+```
+
+```{r}
+lambda = 0.1
+m = nrow(ex3data1$X)
+n = ncol(ex3data1$X)
+num_labels = 10
+
+oneVsAll = function(X, y, num_labels, lambda) {
+  
+  thetas = matrix(0, nrow=num_labels, ncol=n+1)
+  X = cbind(rep(1,m), X) # add a column of 1s for X_0
+  initial_theta = rep(0, n+1)
+  
+  for (i in 1:num_labels) {
+    # train y=i vs not i
+    y_t = matrix(as.integer(y==i),ncol=1)
+    thetas[i, ] = optim(initial_theta, 
+      costr, 
+      gradientr, 
+      X,
+      y_t,
+      lambda,
+      method="BFGS", 
+      control=list(maxit=50))$par
+  }
+  
+  return(thetas)
+}
+  
+thetas = oneVsAll(ex3data1$X, ex3data1$y, num_labels, lambda)
+```
+
+```{r}
+predictOneVsAll = function(thetas, X) {
+  m = nrow(X) #5000
+  num_labels = nrow(thetas) #10
+
+  X = cbind(rep(1,m), X) # add a column of 1s for X_0
+  
+  #t(thetas) = 
+  # 1 2 3 4 5 6 7 8 9 10
+  # . . . . . . . . . . 
+  # . . . . . . . . . . 
+  # 400
+  
+  p = g(X %*% t(thetas)) 
+  # each column of p is the predicted probability that y=1 for that column for each row of X
+  
+  return(apply(p, 1, which.max))
+}
+p = predictOneVsAll(thetas, ex3data1$X)
+mean(p==ex3data1$y)
+```
+
