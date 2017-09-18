@@ -48,7 +48,8 @@ nnCost = function(thetas, input_layer_size, hidden_layer_size, num_labels, X, y,
     y_k = diag(num_labels)[y[i],]   # eg y=3 = c(0,0,1,0,0,0,0,0,0,0)
   
     a2 = g(theta1 %*% X[i, ]) # input to hidden
-    h = g(theta2 %*% rbind(1,a2)) # hidden to output
+    a2 = rbind(1, a2) # add a_0^(2)
+    h = g(theta2 %*% a2) # hidden to output
     
     # vectorise the sum over k labels
     cost = 1/m * (t(-y_k) %*% log(h) - (t(1-y_k) %*% log(1-h)))
@@ -76,6 +77,32 @@ dgdz = function (z) {
 }
 ```
 
+
+## Gradients
+
+Aim is to minimize J(theta). As with linear and logistic regression need to calculate the gradient of the cost function
+
+$$\dfrac{\partial}{\partial \Theta_{i,j}^{(l)}}J(\Theta)$$
+To calculate the gradients:
+
+1. set $\Delta_{i,j}^{(l)}$ to 0 for all l,i,j
+2. For i = 1 to m
+  a) Forward propogate to compute a(l)
+  b) Using y(i) compute 
+$$\delta^{(L)} = a^{(L)} - y^{(i)}$$
+  c) Compute deltas for earlier layers = a weighted average of the errors in l+1
+$$\delta^{(l)} = ((\Theta^{(l)})^T \delta^{(l+1)})\ .*\ a^{(l)}\ .*\ (1 - a^{(l)})$$
+     where a(1-a) is the sigmoid derivative
+  d) Update $\Delta$
+$$\Delta^{(l)}_{i,j} := \Delta^{(l)}_{i,j} + a_j^{(l)} \delta_i^{(l+1)}$$
+
+or vectorized
+
+$$\Delta^{(l)} := \Delta^{(l)} + \delta^{(l+1)}(a^{(l)})^T$$
+
+
+
+  
 ## Exercise
 
 ```{r, echo = FALSE}
@@ -103,94 +130,4 @@ nnCost(nn_params, input_layer_size, hidden_layer_size, num_labels, ex4data1$X, e
 nnCost(nn_params, input_layer_size, hidden_layer_size, num_labels, ex4data1$X, ex4data1$y, lambda=1)
 ```
 
-
-
-
-```{r}
-g = function(z) {
-  1 / (1 + exp(-z))
-}
-costr = function(theta,X,y,lambda=3) {
-  m=length(y)
-  z = X %*% theta
-  h = g(z)
-  cost = 1/m * (t(-y) %*% log(h) - (t(1-y) %*% log(1-h)))
-  theta[1] = 0 # dont't penalty the bias theta
-  cost = cost + lambda/(2*m) * sum(theta^2)
-  return(cost)
-}
-gradientr = function(theta,X,y,lambda=3) {
-  m=length(y)
-  gradient = 1/m * t(X) %*% (g(X %*% theta) - y)
-  theta[1] = 0 # don't include penalty term for bias theta
-  gradient = gradient + (lambda / m) * theta
-  return(gradient)
-}
-predictlr = function(theta, X) g(X %*% theta)
-```
-
-```{r}
-theta_t = c(-2, -1, 1, 2)
-X_t = cbind(rep(1,5), matrix(1:15,nrow=5)/10)
-y_t = c(1,0,1,0,1)
-lambda_t = 3
-costr(theta_t, X_t, y_t, lambda_t)
-```
-
-```{r}
-gradientr(theta_t, X_t, y_t, lambda_t)
-```
-
-```{r}
-lambda = 0.1
-m = nrow(ex3data1$X)
-n = ncol(ex3data1$X)
-num_labels = 10
-
-oneVsAll = function(X, y, num_labels, lambda) {
-  
-  thetas = matrix(0, nrow=num_labels, ncol=n+1)
-  X = cbind(rep(1,m), X) # add a column of 1s for X_0
-  initial_theta = rep(0, n+1)
-  
-  for (i in 1:num_labels) {
-    # train y=i vs not i
-    y_t = matrix(as.integer(y==i),ncol=1)
-    thetas[i, ] = optim(initial_theta, 
-      costr, 
-      gradientr, 
-      X,
-      y_t,
-      lambda,
-      method="BFGS", 
-      control=list(maxit=50))$par
-  }
-  
-  return(thetas)
-}
-  
-thetas = oneVsAll(ex3data1$X, ex3data1$y, num_labels, lambda)
-```
-
-```{r}
-predictOneVsAll = function(thetas, X) {
-  m = nrow(X) #5000
-  num_labels = nrow(thetas) #10
-
-  X = cbind(rep(1,m), X) # add a column of 1s for X_0
-  
-  #t(thetas) = 
-  # 1 2 3 4 5 6 7 8 9 10
-  # . . . . . . . . . . 
-  # . . . . . . . . . . 
-  # 400
-  
-  p = g(X %*% t(thetas)) 
-  # each column of p is the predicted probability that y=1 for that column for each row of X
-  
-  return(apply(p, 1, which.max))
-}
-p = predictOneVsAll(thetas, ex3data1$X)
-mean(p==ex3data1$y)
-```
 
