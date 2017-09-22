@@ -90,9 +90,9 @@ To calculate the gradients:
   a) Forward propogate to compute a(l)
   b) Using y(i) compute 
 $$\delta^{(L)} = a^{(L)} - y^{(i)}$$
-  c) Compute deltas for earlier layers = a weighted average of the errors in l+1
+  c) Compute deltas for earlier layers = a weighted average of the errors in l+1 (where a(1-a) is the sigmoid derivative)
 $$\delta^{(l)} = ((\Theta^{(l)})^T \delta^{(l+1)})\ .*\ a^{(l)}\ .*\ (1 - a^{(l)})$$
-     where a(1-a) is the sigmoid derivative
+Note: Consider $\delta^{(l)}$ as the "error" of the activation units of each layer. It is = derivative $\dfrac{\partial}{\partial z^{(l)}}cost(i)$ ie the gradient of the cost with respect to z 
   d) Update $\Delta$
 $$\Delta^{(l)}_{i,j} := \Delta^{(l)}_{i,j} + a_j^{(l)} \delta_i^{(l+1)}$$
 
