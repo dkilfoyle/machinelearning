@@ -18,7 +18,7 @@ numel = function(m) {
 sigmoid = function(z) { 1 / (1 + exp(-z)) }
 
 sigmoidGradient = function (z) {
-  return (g(z)*(1-g(z)))
+  return (sigmoid(z)*(1-sigmoid(z)))
 }
 
 nnCostFunction = function(input_layer_size, hidden_layer_size, num_labels,X, y, lambda=0) {
@@ -127,6 +127,62 @@ nnGradientFunction = function(input_layer_size, hidden_layer_size, num_labels, X
   }
 }
 
+backPropogate = function(nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, lambda=0) {
+  # Reshape the unrolled thetas into the weight matrices
+  Theta1_size = hidden_layer_size * (input_layer_size + 1)
+  Theta1 = matrix(nn_params[1:Theta1_size], nrow=hidden_layer_size, ncol=(input_layer_size+1))
+  Theta2 = matrix(nn_params[(Theta1_size+1):length(nn_params)], nrow=num_labels, ncol=(hidden_layer_size+1))
+  
+  # m is the number of samples (rows) in X
+  m = nrow(X)
+  
+  # recode y [4 2 3 2 4 1 ...] to Y[i, ] = c(0,0,0,1)
+  I <- diag(num_labels)
+  Y <- matrix(0, m, num_labels)
+  for (i in 1:m) { Y[i,] = I[y[i],] }
+  
+  # iterate
+  for (i in 1:500) {
+    # feedforward - vectorized over i..m (same as costfunction)
+    a1 = cbind(rep(1,m),X)
+    z2 = a1 %*% t(Theta1)
+    a2 = cbind(rep(1,nrow(z2)), sigmoid(z2))
+    z3 = a2 %*% t(Theta2)
+    a3 = sigmoid(z3)
+    h  = a3
+    
+    # calculte regularisation penalty
+    p = sum(Theta1[,-1] ^ 2) + sum(Theta2[,-1] ^ 2)
+    
+    # calculate Cost
+    J = sum((-Y) * log(h) - (1 - Y) * log(1 - h)) / m + lambda * p / (2 * m)
+    
+    print(J)
+    
+    # calculate sigmas = the "error" of each activation unit in a layer
+    sigma3 = h - Y
+    sigma2 = (sigma3 %*% Theta2) * sigmoidGradient(cbind(rep(1,nrow(z2)),z2))
+    sigma2 = sigma2[,-1] # remove a0
+    
+    delta_2 = (t(sigma3) %*% a2)   
+    delta_1 = (t(sigma2) %*% a1)
+    
+    # calculate regularized gradient
+    p1 = (lambda / m) * cbind(rep(0,dim(Theta1)[1]), Theta1[,-1])
+    p2 = (lambda / m) * cbind(rep(0,dim(Theta2)[1]), Theta2[,-1])
+    Theta1_grad = delta_1 / m + p1
+    Theta2_grad = delta_2 / m + p2
+    
+    Theta1 = Theta1 - (1.0 * Theta1_grad)
+    Theta2 = Theta2 - (1.0 * Theta2_grad)
+  }
+  
+  # Unroll gradients
+  grad = c(c(Theta1), c(Theta2))
+  return(grad)
+}
+
+
 randInitializeWeights = function(in_layer_size, out_layer_size) {
   # Randomly initialize the weights to small values
   epsilon_init = 0.12
@@ -183,6 +239,18 @@ checkNNGradients = function(lambda=0) {
   print(grad_diff)
 }
 
+predict.ml = function(Theta1, Theta2, X) {
+  m = nrow(X)
+  num_labels = nrow(Theta2)
+  p = matrix(0, nrow=m, 1)
+
+  # feedforward - vectorized over i..m
+  h1 = sigmoid(cbind(rep(1,m),X) %*% t(Theta1))
+  h2 = sigmoid(cbind(rep(1,m),h1) %*% t(Theta2))
+
+  p = apply(h2, 1, which.max)  #which.max by row
+  return(p)
+}
 
 loadex4 = function() {
   library(R.matlab)
@@ -226,14 +294,21 @@ lambda =1
 costFunction = nnCostFunction(input_layer_size, hidden_layer_size, num_labels, X, y, lambda)
 gradFunction = nnGradientFunction(input_layer_size, hidden_layer_size, num_labels, X, y, lambda)
 
-opt = lbfgsb3_(initial_nn_params, fn= costFunction, gr=gradFunction, control = list(trace=1,maxit=50))
-nn_params = opt$prm
-cost = opt$f
+# opt = lbfgsb3_(initial_nn_params, fn= costFunction, gr=gradFunction, control = list(trace=1,maxit=50))
+# nn_params = opt$prm
+# cost = opt$f
+
+# opt = optim(initial_nn_params, fn= costFunction, gr=gradFunction, method="L-BFGS-B", control = list(trace=1,maxit=50))
+# nn_params = opt$par
+# cost = opt$value
+
+nn_params = backPropogate(initial_nn_params, input_layer_size, hidden_layer_size, num_labels, X, y, lambda)
 
 Theta1 <- matrix(nn_params[1:(hidden_layer_size * (input_layer_size + 1))],  hidden_layer_size, (input_layer_size + 1))
 Theta2 <- matrix(nn_params[(1 + (hidden_layer_size * (input_layer_size + 1))):length(nn_params)],  num_labels, (hidden_layer_size + 1))
 
 displayData(Theta1[, -1])
 
-# pred <- predict(Theta1, Theta2, X)
+pred <- predict.ml(Theta1, Theta2, X)
+print(mean(pred == y) * 100)
 

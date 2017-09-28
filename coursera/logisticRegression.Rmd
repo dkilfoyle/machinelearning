@@ -11,6 +11,7 @@ library(ggplot2)
 library(latex2exp)
 library(shiny)
 library(dplyr)
+library(tidyr)
 source("utils.R")
 ```
 
@@ -24,13 +25,22 @@ $$\begin{align*}& h_\theta (x) = g ( \theta^T x ) \newline \newline& z = \theta^
 g = function(z) {
   1 / (1 + exp(-z))
 }
+dgdz = function(z) {
+  g(z) * (1-g(z))
+}
 ```
 
 
 ```{r}
 data.frame(x=seq(from=-5, to=5, by=0.1)) %>% 
-  mutate(y=g(x)) %>% 
-  ggplot(aes(x,y)) + geom_line() + geom_vline(xintercept = 0, linetype=2)
+  mutate(g=g(x)) %>% 
+  mutate(gprime=dgdz(x)) %>% 
+  gather(eq, y, g, gprime) %>% 
+  ggplot(aes(x,y)) + 
+    facet_grid(. ~ eq,) +
+    geom_line() + geom_vline(xintercept = 0, linetype=2) 
+
+
 ```
 
 ## Cost
