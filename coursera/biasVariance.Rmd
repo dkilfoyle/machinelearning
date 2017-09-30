@@ -1,0 +1,223 @@
+---
+title: "Bias and Variance"
+author: "Dean Kilfoyle"
+date: "16 September 2017"
+output: html_document
+---
+
+# Bias and Variance
+
+## Definitions
+
+```{r echo=F}
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(latex2exp)
+  library(shiny)
+  library(dplyr)
+  library(tidyr)
+  library(R.matlab)
+})
+source("utils.R")
+```
+
+1. Training set 60%
+     * Optimise theta for the current model design
+2. Cross validation set 20%
+     * Check the error for the current thetas
+     * Use this error to find the optimum polynomial degree
+3. Test set 20%
+     * Check the error to assess the generalization
+
+High bias is under-fitting
+
+* Training and Cross validation errors are high
+* Add more polynomial degrees or more features or more samples
+
+High variance is over-fitting
+
+* Training error is low but cross validation error is high
+
+![](biasVariance.png)
+
+## Learning Curve
+
+## Example linear regression
+
+```{r echo=F}
+load_ex5 = function() {
+  return(readMat("ex5/ex5data1.mat"))
+}
+list2env(load_ex5(),.GlobalEnv)
+m = nrow(X)
+```
+
+### Regularised Linear Regression Cost
+
+$$J(\Theta) = \dfrac{1}{2m} \bigg( \sum_{i=1}^m(h_\Theta(x^{(i)}) - y^{(i)})^2 \bigg) + \dfrac{\lambda}{2m} \bigg( \sum_{j=1}^{n}\theta^2 \bigg)$$
+
+### Regularised Linear Regression Gradient
+
+$$\frac{\partial J\left(\theta\right)}{\partial\theta_j} =\dfrac{1}{m} \bigg( \sum_{i=1}^m (h_{\theta}(x^{(i)}) - y^{(i)})x^{(i)} \bigg) + \dfrac{\lambda}{m}\theta_j$$
+
+### Code
+
+```{r}
+addBias = function(X) {
+  return(cbind(rep(1, nrow(X)), X))
+}
+
+linearRegCostFunction = function(theta, X, y, lambda=0) {
+  # X should have a column of 1s at the start for bias
+  m = length(y)
+  theta = as.vector(theta)
+  ho = X %*% theta
+  J = (1/(2*m) * sum((ho-y)^2))
+  theta[1] = 0 # dont't penalty the bias theta
+  J = J + (lambda / (2 * m)) * sum(theta^2)
+  
+  return(J)
+}
+
+
+linearRegGradFunction = function(theta, X, y, lambda=0) {
+  # X should have a column of 1s at the start for bias
+  theta = as.vector(theta)
+  m=length(y)
+  gradient = 1/m * t(X) %*% ((X %*% theta) - y)
+  theta[1] = 0 # don't include penalty term for bias theta
+  gradient = gradient + (lambda / m) * theta
+  return(gradient)
+}
+
+trainLinearReg = function(X, y, lambda) {
+  initial_theta = matrix(0, ncol(X), 1) 
+  mylr=optim(initial_theta, linearRegCostFunction, linearRegGradFunction, X, y, lambda, method="BFGS")
+  return(mylr$par)
+}
+
+predict.lr = function(theta, X) {
+   addBias(X) %*% theta
+}
+```
+
+```{r}
+thetas = trainLinearReg(addBias(X),y,0)
+data.frame(X=X,y=y) %>%
+  ggplot(aes(X,y)) + 
+    geom_point() +
+    geom_abline(intercept=thetas[1,1], slope=thetas[2,1])
+  
+```
+
+## Learning Curve
+
+```{r}
+learningCurve = function(X, y, Xval, yval, lambda) {
+  # X and Xval should have bias columns
+  m = nrow(X)
+  error_train = matrix(0, nrow=m, ncol=1)
+  error_val   = matrix(0, nrow=m, ncol=1)
+  for (i in 1:m) {
+    # train the thetas using 1:i examples
+    Xi = matrix(X[1:i,],nrow=i)
+    yi = matrix(y[1:i,],nrow=i)
+    thetas = trainLinearReg(Xi, yi, lambda)
+    
+    error_train[i] = linearRegCostFunction(thetas, Xi, yi, lambda=0)
+    error_val[i] = linearRegCostFunction(thetas, Xval, yval, lambda=0)
+  }
+  return(list(error_train=error_train, error_val=error_val))
+}
+
+plotLearningCurve = function(lc) {
+  data.frame(x=1:m, train=lc$error_train, validate=lc$error_val) %>%
+  gather(key=run, value=error, -x) %>% 
+  ggplot(aes(x=as.integer(x), y=error)) +
+    geom_line(aes(group=run, color=run)) +
+    xlab("Numer of training examples") +
+    theme(legend.position = c(0.8, 0.8))
+}
+
+lc = learningCurve(addBias(X), y, addBias(Xval), yval, 0)
+plotLearningCurve(lc)
+```
+
+## Polynomial features
+
+$$h_{\theta}(x) = \theta_0 + \theta_1 x_1 + \theta_2 x_1^2 + \theta_3 x_1^3 + \theta_4 x_1^4 + \theta_5 x_1^5 ...$$
+
+Convert X into a matrix with x1, x1^2, x1^3, x1^4 etc. Then use scale so that each column is centered with mean=0, sd=1
+
+```{r}
+polyFeatures = function(X, p) {
+  XX =matrix(0, ncol=p, nrow=nrow(X))
+  for (i in 1:p) {
+    XX[,i] = X[,1]^i
+  }
+  return(XX)
+}
+```
+
+Example using polynomial degree 8 - this overfits the data resulting in a low training error but high validation error.
+
+```{r}
+plotPolyFit = function(minx, maxx, mu, sigma, theta, p) {
+  xr = seq(minx,maxx,by=(maxx-minx)/100)
+  Xr = scale(polyFeatures(cbind(xr),p), center=mu, scale=sigma)
+
+  Xf = data.frame(X=xr, y=predict.lr(theta, Xr))
+  geom_line(data=Xf, aes(X,y), linetype="dashed", color="blue")
+}
+
+X_poly = scale(polyFeatures(X,8))
+thetas = trainLinearReg(addBias(X_poly),y,lambda=0)
+
+fit.plot=ggplot(data.frame(x=X,y=y), aes(x,y)) +
+  geom_point(color="red") +
+  plotPolyFit(min(X),max(X), mu=attr(X_poly,"scaled:center"), sigma=attr(X_poly,"scaled:scale"), thetas, 8)
+
+
+X_poly_val = scale(polyFeatures(Xval,8), center=attr(X_poly, "scaled:center"), scale=attr(X_poly, "scaled:scale"))
+lc = learningCurve(addBias(X_poly), y, addBias(X_poly_val), yval, 0)
+
+multiplot(fit.plot, plotLearningCurve(lc),cols = 2)
+```
+
+Fix the over-fitting by adding lambda = 1
+
+```{r}
+thetas = trainLinearReg(addBias(X_poly),y,lambda=1)
+
+fit.plot=ggplot(data.frame(x=X,y=y), aes(x,y)) +
+  geom_point(color="red") +
+  plotPolyFit(min(X),max(X), mu=attr(X_poly,"scaled:center"), sigma=attr(X_poly,"scaled:scale"), thetas, 8)
+
+
+X_poly_val = scale(polyFeatures(Xval,8), center=attr(X_poly, "scaled:center"), scale=attr(X_poly, "scaled:scale"))
+lc = learningCurve(addBias(X_poly), y, addBias(X_poly_val), yval, lambda=1)
+
+multiplot(fit.plot, plotLearningCurve(lc),cols = 2)
+```
+
+## Optimise Lambda
+
+Choose the lambda with the lowest validation error
+
+```{r}
+lambdas = c(0,0.001,0.003,0.01,0.03,0.1,0.3,1,3,10)
+train_costs =c()
+val_costs = c()
+
+for (lambda in lambdas) {
+  thetas = trainLinearReg(addBias(X_poly),y,lambda) # train theta with training set
+  train_costs = c(train_costs, linearRegCostFunction(thetas, addBias(X_poly), y, lambda=0))
+  val_costs = c(val_costs, linearRegCostFunction(thetas, addBias(X_poly_val), yval, lambda=0))
+}
+
+data.frame(x=factor(1:10,labels=lambdas), train=train_costs, val=val_costs) %>% 
+  gather(key=run, val=cost, -x) %>% 
+  ggplot(aes(x=x,y=cost,group=run,color=run)) +
+    geom_line()
+```
+

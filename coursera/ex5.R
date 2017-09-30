@@ -18,6 +18,7 @@ addBias = function(X) {
 }
 
 linearRegCostFunction = function(theta, X, y, lambda=0) {
+  # X should have a column of 1s at the start for bias
   m = length(y)
   theta = as.vector(theta)
   ho = X %*% theta
@@ -30,6 +31,7 @@ linearRegCostFunction = function(theta, X, y, lambda=0) {
 
 
 linearRegGradFunction = function(theta, X, y, lambda=0) {
+  # X should have a column of 1s at the start for bias
   theta = as.vector(theta)
   m=length(y)
   gradient = 1/m * t(X) %*% ((X %*% theta) - y)
@@ -48,16 +50,16 @@ predict.lr = function(theta, X) {
    addBias(X) %*% theta
 }
 
-theta = cbind(1,1)
-J = linearRegCostFunction(theta, addBias(X), y, 1)
-grad = linearRegGradFunction(theta, addBias(X), y, 1)
-
-lambda = 0
-theta = trainLinearReg(addBias(X), y, lambda)
-
-data.frame(X=X,y=y) %>%
-  ggplot(aes(X,y)) + geom_line() +
-  geom_line(data=data.frame(X=X,y=predict.lr(theta,X)))
+# theta = cbind(1,1)
+# J = linearRegCostFunction(theta, addBias(X), y, 1)
+# grad = linearRegGradFunction(theta, addBias(X), y, 1)
+# 
+# lambda = 0
+# theta = trainLinearReg(addBias(X), y, lambda)
+# 
+# data.frame(X=X,y=y) %>%
+#   ggplot(aes(X,y)) + geom_line() +
+#   geom_line(data=data.frame(X=X,y=predict.lr(theta,X)))
 
 learningCurve = function(X, y, Xval, yval, lambda) {
   m = nrow(X)
@@ -65,12 +67,19 @@ learningCurve = function(X, y, Xval, yval, lambda) {
   error_val   = matrix(0, nrow=m, ncol=1)
   for (i in 1:m) {
     # train the thetas using 1:i examples
-    thetas = trainLinearReg(as.matrix(X[1:i,]),as.matrix(y[1:i,]),lambda)
+    Xi = matrix(X[1:i,],nrow=i)
+    yi = matrix(y[1:i,],nrow=i)
+    thetas = trainLinearReg(Xi, yi, lambda)
     
-    error_train[i] = linearRegCostFunction(thetas, as.matrix(X[1:i,]), as.matrix(y[1:i,]), 0)
-    error_val[i] = linearRegCostFunction(thetas, Xval, yval, 0)
+    error_train[i] = linearRegCostFunction(thetas, Xi, yi, lambda=0)
+    error_val[i] = linearRegCostFunction(thetas, Xval, yval, lambda=0)
   }
-  return(list(error_train, error_val))
+  return(list(error_train=error_train, error_val=error_val))
 }
 
 lc = learningCurve(addBias(X), y, addBias(Xval), yval, 0)
+
+data.frame(x=1:m, train=lc$error_train, validate=lc$error_val) %>% 
+  ggplot(aes(x=x)) +
+    geom_line(aes(y=train)) +
+    geom_line(aes(y=validate))
