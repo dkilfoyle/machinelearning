@@ -29,18 +29,28 @@ source("utils.R")
 3. Test set 20%
      * Check the error to assess the generalization
 
-High bias is under-fitting
+### High bias is under-fitting
 
 * Training and Cross validation errors are high
-* Add more polynomial degrees or more features or more samples
+* Add more polynomial degrees or more features
+* Adding more samples may not help
 
-High variance is over-fitting
+![](highBias.png)
+
+### High variance is over-fitting
 
 * Training error is low but cross validation error is high
+* Reducing features or polynomial degress will help
+* Adding more samples will help
+
+![](highVariance.png)
+
+
+### Polynomial
+
+Adding more polynomial features will improve high-bias underfitting. Adding too many polynomial features will result in high variance over-fitting
 
 ![](biasVariance.png)
-
-## Learning Curve
 
 ## Example linear regression
 
@@ -143,7 +153,7 @@ lc = learningCurve(addBias(X), y, addBias(Xval), yval, 0)
 plotLearningCurve(lc)
 ```
 
-## Polynomial features
+### Polynomial features
 
 $$h_{\theta}(x) = \theta_0 + \theta_1 x_1 + \theta_2 x_1^2 + \theta_3 x_1^3 + \theta_4 x_1^4 + \theta_5 x_1^5 ...$$
 
@@ -200,7 +210,7 @@ lc = learningCurve(addBias(X_poly), y, addBias(X_poly_val), yval, lambda=1)
 multiplot(fit.plot, plotLearningCurve(lc),cols = 2)
 ```
 
-## Optimise Lambda
+### Optimise Lambda
 
 Choose the lambda with the lowest validation error
 

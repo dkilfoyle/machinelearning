@@ -1,0 +1,97 @@
+---
+title: "Support Vector Machine"
+author: "Dean Kilfoyle"
+date: "16 September 2017"
+output: html_document
+---
+
+# Support Vector Machine
+
+```{r echo=F}
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(latex2exp)
+  library(shiny)
+  library(dplyr)
+  library(tidyr)
+  library(R.matlab)
+})
+source("utils.R")
+```
+
+## Optimisation objective
+
+### Logistic Regression
+
+$$\begin{align*}& h_\theta (x) = g ( \theta^T x ) \newline \newline& z = \theta^T x \newline& g(z) = \dfrac{1}{1 + e^{-z}}\end{align*}$$
+
+```{r}
+g = function(z) {
+  1 / (1 + exp(-z))
+}
+```
+
+
+```{r}
+data.frame(x=seq(from=-5, to=5, by=0.1)) %>% 
+  mutate(g=g(x)) %>% 
+  ggplot(aes(x,y=g)) + 
+    geom_line() + geom_vline(xintercept = 0, linetype=2) +
+    ggtitle(TeX("$h_{\\theta}(x)=g(z)$")) +
+    xlab(TeX("$z=\\theta^Tx"))
+
+
+```
+
+If y=1 we want z >> 0
+If y=0 we want z << 0
+
+### Cost function
+
+$$\mathrm{Cost}(h_\theta(x),y) = - (y \; \log h_\theta(x) + (1 - y) \log(1 - h_\theta(x))$$
+
+#### y=1
+
+If y=1 the second term drops out leaving
+
+$$cost = -\log \dfrac{1}{1+e^{-z}}$$
+
+```{r}
+data.frame(z=seq(from=-3, to=3, by=0.1)) %>% 
+  mutate(cost=-log(g(z))) %>% 
+  ggplot(aes(x=z,y=cost)) + 
+    geom_line()
+```
+
+Thus to reduce cost make z as big as possible.
+
+SVM will tweak this to produce straight line down to 1, then flat line at y=0 to right.
+
+#### y=0
+
+If y = 0 then the first term drops out leaving
+
+$$cost = -\log \left( 1- \dfrac{1}{1+e^{-z}}\right)$$
+
+```{r}
+data.frame(z=seq(from=-3, to=3, by=0.1)) %>% 
+  mutate(cost=-log(1-g(z))) %>% 
+  ggplot(aes(x=z,y=cost)) + 
+    geom_line()
+```
+
+Thus if y=0 then to minimize cost want to make z as negative as possible.
+
+### SVM cost function
+
+Reparameterised logisitic regression function:
+
+ * remove 1/m
+ * replace lambda with C = 1/lambda
+ * replace the log sigmoids with cost_1 and cost_0
+
+$$\displaystyle\mathop{\mbox{min}}_\theta\ C\left[\sum_{i=1}^{m}y^{(i)}\text{cost}_1(\theta^Tx^{(i)}) + (1-y^{(i)}) \text{cost}_0(\theta^Tx^{(i)})\right]+\frac{1}{2}\sum_{j=1}^n\theta^2_j$$
+
+
+
+
