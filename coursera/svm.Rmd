@@ -19,7 +19,7 @@ suppressPackageStartupMessages({
 source("utils.R")
 ```
 
-## Optimisation objective
+## SVM Cost Function
 
 ### Logistic Regression
 
@@ -46,11 +46,11 @@ data.frame(x=seq(from=-5, to=5, by=0.1)) %>%
 If y=1 we want z >> 0
 If y=0 we want z << 0
 
-### Cost function
+### Logistic Cost Function
 
 $$\mathrm{Cost}(h_\theta(x),y) = - (y \; \log h_\theta(x) + (1 - y) \log(1 - h_\theta(x))$$
 
-#### y=1
+#### Cost if y=1
 
 If y=1 the second term drops out leaving
 
@@ -67,7 +67,7 @@ Thus to reduce cost make z as big as possible.
 
 SVM will tweak this to produce straight line down to 1, then flat line at y=0 to right.
 
-#### y=0
+#### Cost if y=0
 
 If y = 0 then the first term drops out leaving
 
@@ -82,7 +82,7 @@ data.frame(z=seq(from=-3, to=3, by=0.1)) %>%
 
 Thus if y=0 then to minimize cost want to make z as negative as possible.
 
-### SVM cost function
+### SVM Cost Function
 
 Reparameterised logisitic regression function:
 
@@ -92,6 +92,93 @@ Reparameterised logisitic regression function:
 
 $$\displaystyle\mathop{\mbox{min}}_\theta\ C\left[\sum_{i=1}^{m}y^{(i)}\text{cost}_1(\theta^Tx^{(i)}) + (1-y^{(i)}) \text{cost}_0(\theta^Tx^{(i)})\right]+\frac{1}{2}\sum_{j=1}^n\theta^2_j$$
 
+## Optimisaton target
 
+1. Minimise $\frac{1}{2} \sum_{1}^n{\theta^2}$
+2. Such that $\theta^Tx^{(i)} \geq 1$ if $y^{(i)}=1$
+3. Such that $\theta^Tx^{(i)} \leq -1$ if $y^{(i)}=0$
 
+### Inner product optimisation
+
+:Inner product: $u^T v$ = length along u to the perpendicular projection of v onto u.
+
+$$u^T * v = p * ||u||$$
+
+If we consider $\theta$ to define the normal of the separation boundary then $\theta^Tx^{(i)}$ becomes the perpendicular distance of $x^{(i)}$ to the decision boundary.
+
+Also $\sum \theta^2$ can be rewritten as $\sqrt{(\theta_1^2 + \theta_2^2)}^2 = ||\theta||^2$
+
+Therefore optimisation target becomes:
+
+1. Minimise $\theta$ for $\frac{1}{2} ||\theta||^2$
+2. Such that $p * ||\theta|| \geq 1$ if y = 1
+3. Such that $p * ||\theta|| \leq -1$ if y = 0
+
+## Large Margin Optimisation
+
+We want to produce a decision boundary that **maximises** the distance of each point to the boundary, ie maximises p = distance along boundary normal to point.
+
+Theta defines the normal of the decision boundary. Project each xi onto theta vector using inner product and measure the distance from origin to projected point = p <= maximise this.
+
+By maximising p we can minimise theta which will simultaneously satisfy optimisation targets 1 and 2.
+
+### Functional vs Geometric
+
+$\gamma^{(i)}$ is the un-scaled distance from $x^{(i)}$ to the decision boundary.
+w is the un-scaled normal vector of the decision boundary.
+
+![smvMargin](svmMargin.png)
+
+$\gamma^{(i)}$ can be expressed in terms of w and x because:
+
+Point B = $x^{(i)}-\gamma^{(i)} \cdot \frac{w}{||w||}$
+
+But because B lies on the decision boundary it must satisfy equation $w^Tx + b = 0$. Combining and rearranging yields:
+
+$$\gamma^{(i)}=y^{(i)} \left(\left(\frac{w}{||w||}\right)^Tx^{(i)} + \frac{b}{||w||}\right)$$
+Where y(i) {-1,1} and indicates whether on positive or negative side of decision boundary.
+
+### Optimisation Target
+
+1. min for $\gamma$, w, b $\frac{1}{2}||w||^2$
+2. s.t. $y^{(i)} \left(w^Tx^{(i)} + b\right) \geq 1$ for i=1..m
+
+## Kernels
+
+Instead of features x_1, x_2, x_3 calculate the distance/similarity of each xi to m landmarks l. Landmarks are set xi. Use Kernel functions to calculate the degree of similarity.
+
+### Gaussian
+
+$$f_1 = \exp(-\frac{||x-l^1||^2}{2\sigma^2})$$
+
+To predict y=1 $\theta^T*f > 0$
+
+Increase sigma to broaden the similarity reach of each landmark. This helps prevent overfitting.
+
+## Example
+
+### Load data
+
+```{r}
+ex6data1 = readMat("ex6/ex6data1.mat")
+dat1 = data.frame(cbind(ex6data1$X, ex6data1$y))
+colnames(dat1) = c("x1","x2","y")
+dat1 %>% 
+  ggplot(aes(x1,x2, group=factor(y))) + geom_point(aes(color=factor(y), shape=factor(y)), size=2)
+```
+
+```{r}
+source("gaussianKernel.R")
+source("linearKernel.R")
+source("bsxfun.R")
+source("svmTrain.R")
+```
+
+```{r}
+X=cbind(ex6data1$X)
+y=ex6data1$y
+C=1
+sigma=0.1
+model = svmTrain(X,y,C,gaussianKernel(sigma))
+```
 
